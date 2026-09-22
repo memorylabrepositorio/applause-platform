@@ -5,6 +5,7 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Vendas from "@/pages/Vendas";
 import Checklist from "@/pages/Checklist";
+import Atendimento from "@/pages/Atendimento";
 import ModulePlaceholder from "@/pages/ModulePlaceholder";
 
 export default function App() {
@@ -41,7 +42,7 @@ export default function App() {
             path="/atendimento"
             element={
               <ProtectedRoute>
-                <ModulePlaceholder title="CRM de Atendimento" />
+                <Atendimento />
               </ProtectedRoute>
             }
           />
