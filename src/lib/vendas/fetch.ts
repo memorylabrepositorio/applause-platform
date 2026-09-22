@@ -27,10 +27,11 @@ async function fetchAllRows<T>(table: string): Promise<T[]> {
 }
 
 export async function loadVendasData(): Promise<VendaRow[]> {
-  const [vendas, contratos, agenda] = await Promise.all([
+  const [vendas, contratos, clientes, agenda] = await Promise.all([
     fetchAllRows<any>("vendas"),
     fetchAllRows<any>("contratos"),
+    fetchAllRows<any>("clientes"),
     fetchAllRows<any>("agenda"),
   ]);
-  return buildRowsFromSupabase(vendas, contratos, agenda);
+  return buildRowsFromSupabase(vendas, contratos, clientes, agenda);
 }

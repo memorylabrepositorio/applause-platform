@@ -2,14 +2,10 @@
  * Motor de dados do Painel de Vendas — portado do painel_vendas_publico.html
  * original (que lia direto de vendas/contratos/clientes/agenda no Supabase).
  * A lógica de cruzamento é a mesma; só trocou de JS solto pra TS tipado.
- *
- * v1: cobre venda real cruzada com agenda (linha por item vendido). As linhas
- * sintéticas "NAO COMPROU" (aluno com contrato mas sem nenhuma venda) do
- * painel original ficam pra uma v2, junto do card de institução/produto.
  */
 
 export interface VendaRow {
-  dataVenda: string; // dd/mm/aaaa
+  dataVenda: string; // dd/mm/aaaa, vazio na linha sintética "não comprou"
   dataSessao: string;
   vendedor: string;
   estudio: string;
@@ -18,7 +14,7 @@ export interface VendaRow {
   cpf: string;
   instituicao: string;
   nroControle: string;
-  descricao: string;
+  descricao: string; // "NAO COMPROU" na linha sintética
   total: number;
   status: "" | "NAO ENCONTRADO";
 }
@@ -83,6 +79,37 @@ export function isUnmatchedRow(r: VendaRow): boolean {
   return r.status === "NAO ENCONTRADO";
 }
 
+// "Sessão Estúdio" é uma tag que mora no campo Nº Controle (não em Curso) —
+// marca venda avulsa de estúdio em vez de venda via instituição/turma
+function isSessaoEstudio(r: VendaRow): boolean {
+  const c = norm(r.nroControle);
+  return c === "SESSÃO ESTÚDIO" || c === "SESSAO ESTUDIO";
+}
+
+// instituição vem do contrato; quando falta, muita venda direta de PDV deixa
+// o texto da instituição/turma dentro do próprio Nº Controle
+export function institutionLabelOf(r: VendaRow): string | null {
+  const inst = r.instituicao?.trim();
+  if (inst) {
+    const ni = norm(inst);
+    if (!ni.includes("NÃO INFORMADO") && !ni.includes("NAO INFORMADO") && ni !== "-") return inst;
+  }
+  if (!isSessaoEstudio(r)) {
+    const ctrl = r.nroControle?.trim();
+    if (ctrl && norm(ctrl) !== "-") return ctrl;
+  }
+  return null;
+}
+
+export function comprouStatus(r: VendaRow): "sim" | "nao" {
+  const d = norm(r.descricao);
+  return d === "NAO COMPROU" || d === "NÃO COMPROU" ? "nao" : "sim";
+}
+
+export function agendaStatus(r: VendaRow): "sim" | "nao" {
+  return isUnmatchedRow(r) ? "nao" : "sim";
+}
+
 interface RawVenda {
   data_venda: string | null;
   nro_controle: string | null;
@@ -104,10 +131,21 @@ interface RawAgenda {
   studio: string | null;
   curso: string | null;
 }
+interface RawCliente {
+  nro_controle: string | null;
+  nome_cliente: string | null;
+  cpf: string | null;
+}
 
+// reconstrói, a partir das 4 tabelas reais, a mesma estrutura de linhas do
+// painel original: 1 linha por item vendido (cruzado com a agenda daquele
+// cliente), mais 1 linha sintética "NAO COMPROU" por aluno com contrato mas
+// sem nenhuma venda — assim os cartões de comprou/não comprou continuam
+// usando clientes×contratos como fonte de verdade.
 export function buildRowsFromSupabase(
   vendas: RawVenda[],
   contratos: RawContrato[],
+  clientes: RawCliente[],
   agenda: RawAgenda[]
 ): VendaRow[] {
   const contratoByControle: Record<string, RawContrato> = {};
@@ -122,10 +160,13 @@ export function buildRowsFromSupabase(
     if (!agendaByKey[key]) agendaByKey[key] = a;
   });
 
-  return vendas.map((v): VendaRow => {
+  const rows: VendaRow[] = [];
+  const compraKeys = new Set<string>();
+
+  vendas.forEach((v) => {
     const contrato = contratoByControle[norm(v.nro_controle)];
     const ag = agendaByKey[`${norm(v.nro_controle)}|${norm(v.cliente)}`];
-    return {
+    rows.push({
       dataVenda: isoToBR(v.data_venda),
       dataSessao: ag ? isoToBR(ag.data) : "",
       vendedor: extractVendedor(v.observacoes),
@@ -138,8 +179,35 @@ export function buildRowsFromSupabase(
       descricao: v.descricao_item || "",
       total: numBR(v.total),
       status: ag ? "" : "NAO ENCONTRADO",
-    };
+    });
+    compraKeys.add(`${norm(v.nro_controle)}|${norm(v.cliente)}`);
+    if (v.cpf_cnpj) compraKeys.add(`cpf:${norm(v.cpf_cnpj)}`);
   });
+
+  clientes.forEach((c) => {
+    if (!c.nome_cliente) return;
+    const pairKey = `${norm(c.nro_controle)}|${norm(c.nome_cliente)}`;
+    const cpfKey = c.cpf ? `cpf:${norm(c.cpf)}` : null;
+    if (compraKeys.has(pairKey) || (cpfKey && compraKeys.has(cpfKey))) return;
+    const contrato = contratoByControle[norm(c.nro_controle)];
+    const ag = agendaByKey[pairKey];
+    rows.push({
+      dataVenda: "",
+      dataSessao: ag ? isoToBR(ag.data) : "",
+      vendedor: "",
+      estudio: ag ? ag.studio || "" : "",
+      cliente: c.nome_cliente,
+      curso: contrato?.curso || "",
+      cpf: c.cpf || "",
+      instituicao: contrato?.instituicao || "",
+      nroControle: c.nro_controle || "",
+      descricao: "NAO COMPROU",
+      total: 0,
+      status: ag ? "" : "NAO ENCONTRADO",
+    });
+  });
+
+  return rows;
 }
 
 export interface Filters {
@@ -240,4 +308,40 @@ export function estudioBreakdown(rows: VendaRow[]): { label: string; value: numb
   return Object.entries(map)
     .map(([k, value]) => ({ label: titleCase(k), value }))
     .sort((a, b) => b.value - a.value);
+}
+
+function topWithOthers(map: Record<string, number>, limit: number): { label: string; value: number }[] {
+  const arr = Object.entries(map)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value);
+  if (arr.length <= limit) return arr;
+  const top = arr.slice(0, limit);
+  const restSum = arr.slice(limit).reduce((s, d) => s + d.value, 0);
+  top.push({ label: "Outros", value: restSum });
+  return top;
+}
+
+export function institutionBreakdown(rows: VendaRow[]): { label: string; value: number }[] {
+  const map: Record<string, number> = {};
+  const labelOf: Record<string, string> = {};
+  rows.forEach((r) => {
+    const raw = institutionLabelOf(r);
+    if (!raw) return;
+    const k = norm(raw);
+    map[k] = (map[k] || 0) + r.total;
+    if (!labelOf[k]) labelOf[k] = raw;
+  });
+  return Object.entries(map)
+    .map(([k, value]) => ({ label: titleCase(labelOf[k]), value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10);
+}
+
+export function productBreakdown(rows: VendaRow[]): { label: string; value: number }[] {
+  const map: Record<string, number> = {};
+  rows.forEach((r) => {
+    const pk = r.descricao?.trim() ? titleCase(r.descricao) : "Não informado";
+    map[pk] = (map[pk] || 0) + r.total;
+  });
+  return topWithOthers(map, 7);
 }
