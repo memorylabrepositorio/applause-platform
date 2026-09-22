@@ -1,14 +1,15 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
+import Vendas from "@/pages/Vendas";
 import ModulePlaceholder from "@/pages/ModulePlaceholder";
 
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
@@ -23,7 +24,7 @@ export default function App() {
             path="/vendas"
             element={
               <ProtectedRoute>
-                <ModulePlaceholder title="Painel de Vendas" />
+                <Vendas />
               </ProtectedRoute>
             }
           />
@@ -52,7 +53,7 @@ export default function App() {
             }
           />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </AuthProvider>
   );
 }
