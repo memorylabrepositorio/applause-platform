@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const MODULES = [
   { to: "/vendas", label: "Painel de Vendas", ready: true },
-  { to: "/checklist", label: "Checklist de Solenidade", ready: false },
+  { to: "/checklist", label: "Checklist de Solenidade", ready: true },
   { to: "/atendimento", label: "CRM de Atendimento", ready: false },
   { to: "/sdr", label: "SDR (Agente de IA)", ready: false },
 ];

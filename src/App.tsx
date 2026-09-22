@@ -4,6 +4,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Vendas from "@/pages/Vendas";
+import Checklist from "@/pages/Checklist";
 import ModulePlaceholder from "@/pages/ModulePlaceholder";
 
 export default function App() {
@@ -32,7 +33,7 @@ export default function App() {
             path="/checklist"
             element={
               <ProtectedRoute>
-                <ModulePlaceholder title="Checklist de Solenidade" />
+                <Checklist />
               </ProtectedRoute>
             }
           />
