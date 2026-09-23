@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import Logo from "@/components/Logo";
+import AppearanceMenu from "@/components/AppearanceMenu";
 
 const MODULES = [
   { to: "/vendas", label: "Painel de Vendas", ready: true },
@@ -28,9 +29,12 @@ export default function Dashboard() {
             <p className="text-sm text-ink-300">{org?.name ?? "Organização"}</p>
           </div>
         </div>
-        <button onClick={signOut} className="text-sm text-ink-300 hover:text-ink-50">
-          Sair
-        </button>
+        <div className="flex items-center gap-3">
+          <AppearanceMenu />
+          <button onClick={signOut} className="text-sm text-ink-300 hover:text-ink-50">
+            Sair
+          </button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

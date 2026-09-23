@@ -1,35 +1,42 @@
 /** @type {import('tailwindcss').Config} */
+function withOpacity(varName) {
+  return `rgb(var(${varName}) / <alpha-value>)`;
+}
+
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  darkMode: ["selector", '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
-        // Paleta portada do painel antigo (MemoryLab): navy profundo + azul de marca,
-        // no lugar do slate/indigo genérico usado no rascunho inicial dos módulos.
+        // Tokens semânticos: os valores reais vivem em variáveis CSS
+        // (src/index.css), que trocam com data-theme/data-accent — assim
+        // toda classe bg-ink-900/text-brand-600 já responde ao tema sem
+        // precisar duplicar nada aqui.
         ink: {
-          950: "#01071f", // fundo mais profundo (ex.: overlays, cards internos)
-          900: "#071129", // fundo padrão das páginas
-          850: "#0a1636", // cards, painéis
-          800: "#0f1c40", // bordas/hover de card
-          700: "#16214a", // bordas (var(--grid) do painel antigo)
-          600: "#253568", // bordas mais claras / baseline
-          500: "#4b5670",
-          400: "#7783a8", // texto secundário-mudo
-          300: "#b7c0dd", // texto secundário
-          100: "#e8ecf7",
-          50: "#ffffff",
+          950: withOpacity("--ink-950"),
+          900: withOpacity("--ink-900"),
+          850: withOpacity("--ink-850"),
+          800: withOpacity("--ink-800"),
+          700: withOpacity("--ink-700"),
+          600: withOpacity("--ink-600"),
+          500: withOpacity("--ink-500"),
+          400: withOpacity("--ink-400"),
+          300: withOpacity("--ink-300"),
+          100: withOpacity("--ink-100"),
+          50: withOpacity("--ink-50"),
         },
         brand: {
-          950: "#02172c",
-          900: "#04274d",
-          800: "#053a70",
-          700: "#064a8c",
-          600: "#0464b0", // azul de marca (var(--series-1) do painel antigo)
-          500: "#1f7ecb",
-          400: "#4a9ade",
-          300: "#7fb8e8",
-          200: "#b7d7f2",
-          100: "#e0eefa",
+          950: withOpacity("--brand-950"),
+          900: withOpacity("--brand-900"),
+          800: withOpacity("--brand-800"),
+          700: withOpacity("--brand-700"),
+          600: withOpacity("--brand-600"),
+          500: withOpacity("--brand-500"),
+          400: withOpacity("--brand-400"),
+          300: withOpacity("--brand-300"),
+          200: withOpacity("--brand-200"),
+          100: withOpacity("--brand-100"),
         },
       },
     },

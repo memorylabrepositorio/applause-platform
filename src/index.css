@@ -1,3 +1,98 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ---------------------------------------------------------------------
+   Tema (claro/escuro) — os tokens `ink-*` do Tailwind apontam pra essas
+   variáveis, então qualquer classe `bg-ink-900`, `text-ink-50` etc já
+   troca sozinha quando o atributo data-theme muda, sem tocar em nenhum
+   componente. O azul de marca (`brand-*`) fica igual nos dois temas.
+   --------------------------------------------------------------------- */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink-950: 0 0 0;
+  --ink-900: 9 9 11;
+  --ink-850: 17 17 19;
+  --ink-800: 25 25 28;
+  --ink-700: 35 35 38;
+  --ink-600: 44 44 48;
+  --ink-500: 74 74 82;
+  --ink-400: 138 138 148;
+  --ink-300: 180 180 189;
+  --ink-100: 232 232 236;
+  --ink-50: 255 255 255;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ink-950: 255 255 255;
+  --ink-900: 246 246 248;
+  --ink-850: 255 255 255;
+  --ink-800: 236 236 239;
+  --ink-700: 221 221 227;
+  --ink-600: 201 201 209;
+  --ink-500: 143 143 154;
+  --ink-400: 107 107 119;
+  --ink-300: 69 69 79;
+  --ink-100: 28 28 33;
+  --ink-50: 10 10 12;
+}
+
+/* acentos — pré-ajustados, o usuário escolhe um no menu de aparência */
+:root,
+:root[data-accent="blue"] {
+  --brand-950: 2 23 44;
+  --brand-900: 4 39 77;
+  --brand-800: 5 58 112;
+  --brand-700: 6 74 140;
+  --brand-600: 4 100 176;
+  --brand-500: 31 126 203;
+  --brand-400: 74 154 222;
+  --brand-300: 127 184 232;
+  --brand-200: 183 215 242;
+  --brand-100: 224 238 250;
+}
+
+:root[data-accent="violet"] {
+  --brand-950: 21 15 51;
+  --brand-900: 34 26 82;
+  --brand-800: 51 40 117;
+  --brand-700: 61 49 144;
+  --brand-600: 74 58 167;
+  --brand-500: 101 82 194;
+  --brand-400: 133 116 214;
+  --brand-300: 169 158 229;
+  --brand-200: 202 195 240;
+  --brand-100: 233 230 250;
+}
+
+:root[data-accent="green"] {
+  --brand-950: 3 37 26;
+  --brand-900: 6 61 42;
+  --brand-800: 10 89 64;
+  --brand-700: 13 117 81;
+  --brand-600: 27 175 122;
+  --brand-500: 47 200 144;
+  --brand-400: 95 216 169;
+  --brand-300: 147 229 196;
+  --brand-200: 195 241 224;
+  --brand-100: 229 250 241;
+}
+
+:root[data-accent="orange"] {
+  --brand-950: 44 18 6;
+  --brand-900: 74 31 10;
+  --brand-800: 110 46 15;
+  --brand-700: 148 62 20;
+  --brand-600: 235 104 52;
+  --brand-500: 240 131 90;
+  --brand-400: 244 161 129;
+  --brand-300: 248 192 170;
+  --brand-200: 251 220 203;
+  --brand-100: 253 238 229;
+}
+
+* {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}

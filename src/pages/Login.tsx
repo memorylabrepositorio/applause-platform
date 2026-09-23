@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import Logo from "@/components/Logo";
+import AppearanceMenu from "@/components/AppearanceMenu";
 
 export default function Login() {
   const { session } = useAuth();
@@ -23,7 +24,10 @@ export default function Login() {
   }
 
   return (
-    <div className="flex h-screen items-center justify-center bg-ink-900">
+    <div className="relative flex h-screen items-center justify-center bg-ink-900">
+      <div className="absolute right-4 top-4">
+        <AppearanceMenu />
+      </div>
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-sm space-y-3 rounded-lg border border-ink-800 bg-ink-850 p-6 shadow-xl shadow-black/30"

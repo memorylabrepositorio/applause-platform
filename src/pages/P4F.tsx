@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, Cell, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import BackLink from "@/components/BackLink";
+import { useTheme } from "@/contexts/ThemeContext";
+import { categoricalPalette, CHART_NEUTRALS } from "@/lib/chartPalette";
 import { loadVendasData } from "@/lib/vendas/fetch";
 import {
   estudioKey,
@@ -38,10 +40,15 @@ interface RowComGrupo extends VendaRow {
 }
 
 export default function P4F() {
+  const { theme } = useTheme();
+  const cores = categoricalPalette(theme);
+  const neutros = CHART_NEUTRALS[theme];
+
   const [rows, setRows] = useState<VendaRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("Todos");
+  const [detalheGrupo, setDetalheGrupo] = useState<Grupo | null>(null);
 
   useEffect(() => {
     loadVendasData()
@@ -87,6 +94,21 @@ export default function P4F() {
 
   const total = lista.reduce((s, r) => s + r.total, 0);
 
+  const detalhe = useMemo(() => {
+    if (!detalheGrupo) return null;
+    const rowsDoGrupo = base.filter((r) => r.grupo === detalheGrupo);
+    const faturamento = rowsDoGrupo.reduce((s, r) => s + r.total, 0);
+    const ticketMedio = rowsDoGrupo.length ? faturamento / rowsDoGrupo.length : 0;
+    const topClientes = [...rowsDoGrupo].sort((a, b) => b.total - a.total).slice(0, 5);
+    const porVendedor = new Map<string, number>();
+    rowsDoGrupo.forEach((r) => {
+      const v = vendedorLabel(r) || "Sem vendedor";
+      porVendedor.set(v, (porVendedor.get(v) || 0) + r.total);
+    });
+    const topVendedores = [...porVendedor.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+    return { grupo: detalheGrupo, registros: rowsDoGrupo.length, faturamento, ticketMedio, topClientes, topVendedores };
+  }, [detalheGrupo, base]);
+
   if (error) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-ink-900 text-ink-50">
@@ -117,31 +139,63 @@ export default function P4F() {
       </header>
 
       <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Kpi label="Porto Alegre" value={String(chartData[0].registros)} />
-        <Kpi label="Caxias" value={String(chartData[1].registros)} />
-        <Kpi label="Novo Hamburgo" value={String(chartData[2].registros)} />
+        {GRUPOS.map((g, i) => (
+          <button key={g} onClick={() => setDetalheGrupo(g)} className="text-left">
+            <Kpi label={g} value={String(chartData[i].registros)} accentColor={cores[i]} />
+          </button>
+        ))}
       </div>
 
       <div className="mb-3 rounded-lg border border-ink-800 bg-ink-850 p-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-400">
-          Registros por estúdio
-        </p>
-        <ResponsiveContainer width="100%" height={180}>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-400">Registros por estúdio</p>
+          <p className="text-xs text-ink-500">clique numa barra pra ver detalhes</p>
+        </div>
+        <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#16214a" vertical={false} />
-            <XAxis dataKey="grupo" tick={{ fill: "#7783a8", fontSize: 11 }} axisLine={{ stroke: "#16214a" }} tickLine={false} />
-            <YAxis tick={{ fill: "#7783a8", fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
+            <defs>
+              {chartData.map((d, i) => (
+                <linearGradient key={d.grupo} id={`p4f-grad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={cores[i]} stopOpacity={1} />
+                  <stop offset="100%" stopColor={cores[i]} stopOpacity={0.55} />
+                </linearGradient>
+              ))}
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke={neutros.grid} vertical={false} />
+            <XAxis dataKey="grupo" tick={{ fill: neutros.axis, fontSize: 11 }} axisLine={{ stroke: neutros.grid }} tickLine={false} />
+            <YAxis tick={{ fill: neutros.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
             <Tooltip
-              cursor={{ fill: "rgba(4,100,176,0.1)" }}
-              contentStyle={{ background: "#0a1636", border: "1px solid #16214a", borderRadius: 8, fontSize: 12 }}
-              labelStyle={{ color: "#e8ecf7" }}
+              cursor={{ fill: "rgba(4,100,176,0.08)" }}
+              contentStyle={{ background: neutros.tooltipBg, border: `1px solid ${neutros.grid}`, borderRadius: 10, fontSize: 12 }}
+              labelStyle={{ color: neutros.tooltipText, fontWeight: 600 }}
               formatter={(value: number, name: string) =>
                 name === "faturamento" ? [fmtBRL(value), "Faturamento"] : [value, "Registros"]
               }
             />
-            <Bar dataKey="registros" fill="#0464b0" radius={[4, 4, 0, 0]} maxBarSize={64} />
+            <Bar
+              dataKey="registros"
+              radius={[6, 6, 0, 0]}
+              maxBarSize={72}
+              cursor="pointer"
+              isAnimationActive
+              animationDuration={700}
+              animationEasing="ease-out"
+              onClick={(d) => setDetalheGrupo(d.grupo as Grupo)}
+            >
+              {chartData.map((d, i) => (
+                <Cell key={d.grupo} fill={`url(#p4f-grad-${i})`} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
+        <div className="mt-1 flex flex-wrap items-center gap-3">
+          {GRUPOS.map((g, i) => (
+            <span key={g} className="flex items-center gap-1.5 text-xs text-ink-300">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: cores[i] }} />
+              {g}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -208,14 +262,84 @@ export default function P4F() {
           </tbody>
         </table>
       </div>
+
+      {detalhe && (
+        <div
+          className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setDetalheGrupo(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-lg border border-ink-700 bg-ink-850 p-4 shadow-2xl shadow-black/50"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-ink-400">Detalhe do grupo</p>
+                <p className="text-lg font-semibold">{detalhe.grupo}</p>
+              </div>
+              <button onClick={() => setDetalheGrupo(null)} className="text-ink-500 hover:text-ink-50">✕</button>
+            </div>
+
+            <div className="mb-4 grid grid-cols-3 gap-2">
+              <div className="rounded-md border border-ink-700 p-2 text-center">
+                <p className="text-xs text-ink-400">Registros</p>
+                <p className="text-base font-semibold">{detalhe.registros}</p>
+              </div>
+              <div className="rounded-md border border-ink-700 p-2 text-center">
+                <p className="text-xs text-ink-400">Faturamento</p>
+                <p className="text-base font-semibold">{fmtBRL(detalhe.faturamento)}</p>
+              </div>
+              <div className="rounded-md border border-ink-700 p-2 text-center">
+                <p className="text-xs text-ink-400">Ticket médio</p>
+                <p className="text-base font-semibold">{fmtBRL(detalhe.ticketMedio)}</p>
+              </div>
+            </div>
+
+            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-400">Top clientes</p>
+            <div className="mb-4 space-y-1">
+              {detalhe.topClientes.map((c, i) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <span className="truncate">{c.cliente}</span>
+                  <span className="text-ink-300">{fmtBRL(c.total)}</span>
+                </div>
+              ))}
+              {!detalhe.topClientes.length && <p className="text-sm text-ink-500">Sem registros.</p>}
+            </div>
+
+            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-400">Vendedores</p>
+            <div className="space-y-1">
+              {detalhe.topVendedores.map(([v, valor]) => (
+                <div key={v} className="flex items-center justify-between text-sm">
+                  <span>{v}</span>
+                  <span className="text-ink-300">{fmtBRL(valor)}</span>
+                </div>
+              ))}
+              {!detalhe.topVendedores.length && <p className="text-sm text-ink-500">Sem registros.</p>}
+            </div>
+
+            <button
+              onClick={() => {
+                setFiltro(detalhe.grupo);
+                setDetalheGrupo(null);
+              }}
+              className="mt-4 w-full rounded-md bg-brand-600 py-1.5 text-sm font-medium text-white hover:bg-brand-500"
+            >
+              Ver todos na tabela
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value, accentColor }: { label: string; value: string; accentColor: string }) {
   return (
-    <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
-      <p className="text-xs text-ink-400">{label}</p>
+    <div className="rounded-lg border border-ink-800 bg-ink-850 p-3 transition hover:border-ink-600">
+      <div className="flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full" style={{ background: accentColor }} />
+        <p className="text-xs text-ink-400">{label}</p>
+      </div>
       <p className="mt-1 text-lg font-semibold text-ink-50">{value}</p>
     </div>
   );

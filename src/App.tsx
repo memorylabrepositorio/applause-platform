@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
@@ -17,6 +18,7 @@ import ModulePlaceholder from "@/pages/ModulePlaceholder";
 
 export default function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
       <HashRouter>
         <Routes>
@@ -112,5 +114,6 @@ export default function App() {
         </Routes>
       </HashRouter>
     </AuthProvider>
+    </ThemeProvider>
   );
 }

@@ -4,12 +4,15 @@ import BackLink from "@/components/BackLink";
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { useTheme } from "@/contexts/ThemeContext";
+import { CHART_NEUTRALS } from "@/lib/chartPalette";
 import { loadVendasData } from "@/lib/vendas/fetch";
 import {
   agendaStatus,
@@ -44,6 +47,8 @@ function norm(s: string): string {
 type AlunosStatus = "" | "comprou" | "naocomprou" | "agendado" | "naoagendado";
 
 export default function Vendas() {
+  const { theme } = useTheme();
+  const neutros = CHART_NEUTRALS[theme];
   const [rows, setRows] = useState<VendaRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>({ year: String(new Date().getFullYear()) });
@@ -188,6 +193,14 @@ export default function Vendas() {
             Estúdio: {filters.estudio} ✕
           </button>
         )}
+        {filters.month && (
+          <button
+            onClick={() => setFilters((f) => ({ ...f, month: undefined }))}
+            className="rounded-md border border-brand-700 bg-brand-950 px-2.5 py-1 text-sm text-brand-300"
+          >
+            Mês: {monthly.find((m) => m.key.endsWith(`-${filters.month}`))?.label || filters.month} ✕
+          </button>
+        )}
       </div>
 
       {/* KPIs */}
@@ -201,17 +214,55 @@ export default function Vendas() {
 
       {/* faturamento mensal */}
       <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
-        <p className="mb-3 text-sm font-medium text-ink-100">Faturamento por mês</p>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-medium text-ink-100">Faturamento por mês</p>
+          <p className="text-xs text-ink-400">Clique numa barra pra filtrar o mês</p>
+        </div>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={monthly}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-            <XAxis dataKey="label" stroke="#64748b" fontSize={12} />
-            <YAxis stroke="#64748b" fontSize={12} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+            <defs>
+              <linearGradient id="vendasMesGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#0464b0" stopOpacity={1} />
+                <stop offset="100%" stopColor="#0464b0" stopOpacity={0.45} />
+              </linearGradient>
+              <linearGradient id="vendasMesGradientDim" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#0464b0" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#0464b0" stopOpacity={0.15} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke={neutros.grid} />
+            <XAxis dataKey="label" stroke={neutros.axis} fontSize={12} />
+            <YAxis stroke={neutros.axis} fontSize={12} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
             <Tooltip
+              cursor={{ fill: neutros.grid, opacity: 0.4 }}
               formatter={(v: number) => fmtBRL(v)}
-              contentStyle={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8 }}
+              contentStyle={{
+                background: neutros.tooltipBg,
+                border: `1px solid ${neutros.grid}`,
+                borderRadius: 8,
+                color: neutros.tooltipText,
+              }}
             />
-            <Bar dataKey="revenue" fill="#6366f1" radius={[4, 4, 0, 0]} />
+            <Bar
+              dataKey="revenue"
+              radius={[4, 4, 0, 0]}
+              cursor="pointer"
+              isAnimationActive
+              animationDuration={700}
+              animationEasing="ease-out"
+              onClick={(d: { key: string }) => {
+                const month = d.key.split("-")[1];
+                setFilters((f) => ({ ...f, month: f.month === month ? undefined : month }));
+              }}
+            >
+              {monthly.map((m) => {
+                const mk = m.key.split("-")[1];
+                const dimmed = filters.month && filters.month !== mk;
+                return (
+                  <Cell key={m.key} fill={dimmed ? "url(#vendasMesGradientDim)" : "url(#vendasMesGradient)"} />
+                );
+              })}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
