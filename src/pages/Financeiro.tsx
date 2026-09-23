@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import BackLink from "@/components/BackLink";
 import {
   atualizarParcela,
   criarParcela,
@@ -212,52 +213,50 @@ export default function Financeiro() {
 
   if (loadError && !parcelas) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-950 text-slate-100">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-ink-900 text-ink-50">
         <p className="text-red-400">Não foi possível carregar os dados: {loadError}</p>
-        <Link to="/" className="text-indigo-400 hover:text-indigo-300">← Voltar</Link>
+        <Link to="/" className="text-brand-400 hover:text-brand-300">← Voltar</Link>
       </div>
     );
   }
 
   if (!parcelas) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
+      <div className="flex min-h-screen items-center justify-center bg-ink-900 text-ink-300">
         Carregando financeiro…
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 text-slate-100 sm:p-8">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Financeiro — Contas a Receber</h1>
-          <p className="flex items-center gap-2 text-sm text-slate-500">
+          <h1 className="text-xl font-semibold">Financeiro — Contas a Receber</h1>
+          <p className="flex items-center gap-2 text-sm text-ink-400">
             <span
               className={`inline-block h-2 w-2 rounded-full ${
-                statusKind === "ok" ? "bg-emerald-500" : statusKind === "err" ? "bg-red-500" : "bg-slate-600"
+                statusKind === "ok" ? "bg-emerald-500" : statusKind === "err" ? "bg-red-500" : "bg-ink-500"
               }`}
             />
             {statusText}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => refresh(true)} className="text-sm text-slate-400 hover:text-slate-200">
+          <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
             ↻ Atualizar
           </button>
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+            className="rounded-md bg-brand-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-brand-500"
           >
             + Nova parcela
           </button>
-          <Link to="/" className="text-sm text-slate-400 hover:text-slate-200">
-            ← Painel principal
-          </Link>
+        <BackLink />
         </div>
       </header>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Total contratado" value={fmtBRL(kpis.totalContratado)} />
         <Kpi label="Recebido" value={fmtBRL(kpis.totalRecebido)} tone="emerald" />
         <Kpi label="Em aberto (em dia)" value={fmtBRL(kpis.totalEmAberto)} tone="slate" />
@@ -265,28 +264,28 @@ export default function Financeiro() {
       </div>
 
       {showForm && (
-        <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
-          <p className="mb-3 text-sm font-medium text-slate-300">Nova parcela</p>
+        <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+          <p className="mb-3 text-sm font-medium text-ink-100">Nova parcela</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Código do cliente">
               <input
                 value={form.cliente_codigo}
                 onChange={(e) => setForm((f) => ({ ...f, cliente_codigo: e.target.value }))}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
             <Field label="Nº controle do contrato">
               <input
                 value={form.contrato_nro_controle}
                 onChange={(e) => setForm((f) => ({ ...f, contrato_nro_controle: e.target.value }))}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
             <Field label="Forma de pagamento">
               <select
                 value={form.forma_pagamento}
                 onChange={(e) => setForm((f) => ({ ...f, forma_pagamento: e.target.value as FormaPagamento }))}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               >
                 {FORMAS.map((f) => (
                   <option key={f} value={f}>{FORMA_LABEL[f]}</option>
@@ -298,7 +297,7 @@ export default function Financeiro() {
                 type="date"
                 value={form.vencimento}
                 onChange={(e) => setForm((f) => ({ ...f, vencimento: e.target.value }))}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
             <Field label="Valor da parcela (R$)">
@@ -306,28 +305,28 @@ export default function Financeiro() {
                 value={form.valor_parcela}
                 onChange={(e) => setForm((f) => ({ ...f, valor_parcela: e.target.value }))}
                 placeholder="0,00"
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
             <Field label="Parcela nº">
               <input
                 value={form.numero_parcela}
                 onChange={(e) => setForm((f) => ({ ...f, numero_parcela: e.target.value }))}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
             <Field label="Total de parcelas">
               <input
                 value={form.total_parcelas}
                 onChange={(e) => setForm((f) => ({ ...f, total_parcelas: e.target.value }))}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
             <Field label="Telefone de cobrança">
               <input
                 value={form.telefone_cobranca}
                 onChange={(e) => setForm((f) => ({ ...f, telefone_cobranca: e.target.value }))}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
             <div className="sm:col-span-2 lg:col-span-4">
@@ -336,7 +335,7 @@ export default function Financeiro() {
                   value={form.observacoes}
                   onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))}
                   rows={2}
-                  className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                  className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
                 />
               </Field>
             </div>
@@ -346,7 +345,7 @@ export default function Financeiro() {
             <button
               onClick={handleCriar}
               disabled={saving}
-              className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+              className="rounded-md bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
             >
               Salvar parcela
             </button>
@@ -356,7 +355,7 @@ export default function Financeiro() {
                 setForm(EMPTY_FORM);
                 setFormError("");
               }}
-              className="text-sm text-slate-400 hover:text-slate-200"
+              className="text-sm text-ink-300 hover:text-ink-50"
             >
               Cancelar
             </button>
@@ -368,7 +367,7 @@ export default function Financeiro() {
         <select
           value={filters.status}
           onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value as "" | StatusParcela }))}
-          className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+          className="rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
         >
           <option value="">Todos os status</option>
           <option value="em_dia">Em dia</option>
@@ -379,36 +378,36 @@ export default function Financeiro() {
           value={filters.search}
           onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
           placeholder="Buscar cliente, contrato, telefone, instituição…"
-          className="min-w-[240px] flex-1 rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+          className="min-w-[240px] flex-1 rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
         />
         {(filters.status || filters.search) && (
           <button
             onClick={() => setFilters(EMPTY_FILTERS)}
-            className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+            className="rounded-md border border-ink-600 px-2.5 py-1 text-sm text-ink-300 hover:text-ink-50"
           >
             Limpar filtros
           </button>
         )}
-        <span className="text-xs text-slate-500">{filtradas.length} parcela(s)</span>
+        <span className="text-xs text-ink-400">{filtradas.length} parcela(s)</span>
       </div>
 
-      <div className="overflow-auto rounded-xl border border-slate-800 bg-slate-900">
+      <div className="overflow-auto rounded-lg border border-ink-800 bg-ink-850">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-800 text-xs text-slate-500">
+          <thead className="border-b border-ink-800 text-xs text-ink-400">
             <tr>
-              <th className="px-3 py-2">Cliente</th>
-              <th className="px-3 py-2">Instituição</th>
-              <th className="px-3 py-2">Parcela</th>
-              <th className="px-3 py-2">Forma</th>
-              <th className="px-3 py-2">Vencimento</th>
-              <th className="px-3 py-2">Valor</th>
-              <th className="px-3 py-2">Status</th>
+              <th className="px-2.5 py-1.5">Cliente</th>
+              <th className="px-2.5 py-1.5">Instituição</th>
+              <th className="px-2.5 py-1.5">Parcela</th>
+              <th className="px-2.5 py-1.5">Forma</th>
+              <th className="px-2.5 py-1.5">Vencimento</th>
+              <th className="px-2.5 py-1.5">Valor</th>
+              <th className="px-2.5 py-1.5">Status</th>
             </tr>
           </thead>
           <tbody>
             {!filtradas.length && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
+                <td colSpan={7} className="px-3 py-6 text-center text-ink-400">
                   Nenhuma parcela encontrada.
                 </td>
               </tr>
@@ -417,15 +416,15 @@ export default function Financeiro() {
               <tr
                 key={p.id}
                 onClick={() => openDrawer(p)}
-                className="cursor-pointer border-b border-slate-800/60 hover:bg-slate-800/40"
+                className="cursor-pointer border-b border-ink-800/60 hover:bg-ink-800/40"
               >
-                <td className="px-3 py-2">{p.clienteNome}</td>
-                <td className="px-3 py-2 text-slate-400">{p.instituicao}</td>
-                <td className="px-3 py-2 text-slate-400">{p.numero_parcela}/{p.total_parcelas}</td>
-                <td className="px-3 py-2 text-slate-400">{FORMA_LABEL[p.forma_pagamento]}</td>
-                <td className="px-3 py-2 text-slate-400">{fmtDateBR(p.vencimento)}</td>
-                <td className="px-3 py-2">{fmtBRL(p.valor_parcela)}</td>
-                <td className="px-3 py-2">
+                <td className="px-2.5 py-1.5">{p.clienteNome}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{p.instituicao}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{p.numero_parcela}/{p.total_parcelas}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{FORMA_LABEL[p.forma_pagamento]}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{fmtDateBR(p.vencimento)}</td>
+                <td className="px-2.5 py-1.5">{fmtBRL(p.valor_parcela)}</td>
+                <td className="px-2.5 py-1.5">
                   <StatusBadge status={statusParcela(p)} />
                 </td>
               </tr>
@@ -437,17 +436,17 @@ export default function Financeiro() {
       {drawerParcela && (
         <div className="fixed inset-0 z-20 flex justify-end bg-black/50" onClick={() => setDrawerId(null)}>
           <div
-            className="h-full w-full max-w-md overflow-auto border-l border-slate-800 bg-slate-950 p-5"
+            className="h-full w-full max-w-md overflow-auto border-l border-ink-800 bg-ink-900 p-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <p className="text-lg font-medium">{drawerParcela.clienteNome}</p>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-ink-400">
                   {drawerParcela.instituicao} {drawerParcela.curso ? `· ${drawerParcela.curso}` : ""}
                 </p>
               </div>
-              <button onClick={() => setDrawerId(null)} className="text-slate-500 hover:text-slate-200">✕</button>
+              <button onClick={() => setDrawerId(null)} className="text-ink-400 hover:text-ink-50">✕</button>
             </div>
 
             <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
@@ -464,25 +463,25 @@ export default function Financeiro() {
             </div>
 
             {!drawerParcela.pago ? (
-              <div className="mb-4 rounded-lg border border-slate-800 bg-slate-900 p-3">
-                <p className="mb-2 text-xs text-slate-500">Marcar como paga</p>
+              <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+                <p className="mb-2 text-xs text-ink-400">Marcar como paga</p>
                 <div className="mb-2 grid grid-cols-2 gap-2">
                   <input
                     value={pagoValor}
                     onChange={(e) => setPagoValor(e.target.value)}
                     placeholder="Valor pago"
-                    className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-sm"
+                    className="rounded-md border border-ink-600 bg-ink-800 px-2 py-1 text-sm"
                   />
                   <input
                     type="date"
                     value={pagoData}
                     onChange={(e) => setPagoData(e.target.value)}
-                    className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-sm"
+                    className="rounded-md border border-ink-600 bg-ink-800 px-2 py-1 text-sm"
                   />
                 </div>
                 <button
                   onClick={handleMarcarPaga}
-                  className="w-full rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500"
+                  className="w-full rounded-md bg-emerald-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-emerald-500"
                 >
                   Confirmar pagamento
                 </button>
@@ -492,25 +491,25 @@ export default function Financeiro() {
                 <p className="text-sm text-emerald-300">
                   Pago em {fmtDateBR(drawerParcela.pago_em)} · {fmtBRL(drawerParcela.valor_pago || 0)}
                 </p>
-                <button onClick={handleDesmarcar} className="mt-2 text-xs text-slate-400 hover:text-slate-200">
+                <button onClick={handleDesmarcar} className="mt-2 text-xs text-ink-300 hover:text-ink-50">
                   Desmarcar pagamento
                 </button>
               </div>
             )}
 
             <div className="mb-4">
-              <label className="mb-1 block text-xs text-slate-500">Observações</label>
+              <label className="mb-1 block text-xs text-ink-400">Observações</label>
               <textarea
                 defaultValue={drawerParcela.observacoes || ""}
                 onBlur={(e) => handleSalvarObs(e.target.value)}
                 rows={3}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </div>
 
             <button
               onClick={handleExcluir}
-              className="w-full rounded-md border border-red-900 bg-red-950/50 px-3 py-1.5 text-sm text-red-400 hover:bg-red-950"
+              className="w-full rounded-md border border-red-900 bg-red-950/50 px-2.5 py-1 text-sm text-red-400 hover:bg-red-950"
             >
               Remover parcela
             </button>
@@ -523,11 +522,11 @@ export default function Financeiro() {
 
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: "emerald" | "red" | "slate" }) {
   const toneClass =
-    tone === "emerald" ? "text-emerald-400" : tone === "red" ? "text-red-400" : "text-slate-100";
+    tone === "emerald" ? "text-emerald-400" : tone === "red" ? "text-red-400" : "text-ink-50";
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className={`mt-1 text-xl font-semibold ${toneClass}`}>{value}</p>
+    <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
+      <p className="text-xs text-ink-400">{label}</p>
+      <p className={`mt-1 text-lg font-semibold ${toneClass}`}>{value}</p>
     </div>
   );
 }
@@ -535,7 +534,7 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: "eme
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-xs text-slate-500">{label}</label>
+      <label className="mb-1 block text-xs text-ink-400">{label}</label>
       {children}
     </div>
   );
@@ -544,7 +543,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-xs text-ink-400">{label}</p>
       <p>{value}</p>
     </div>
   );

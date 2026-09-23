@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import Logo from "@/components/Logo";
 
 const MODULES = [
   { to: "/vendas", label: "Painel de Vendas", ready: true },
@@ -17,31 +18,39 @@ export default function Dashboard() {
   const { org, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen bg-slate-950 p-8 text-slate-100">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Applause</h1>
-          <p className="text-sm text-slate-400">{org?.name ?? "Organização"}</p>
+    <div className="min-h-screen bg-ink-900 p-6 text-ink-50">
+      <header className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Logo className="h-9" />
+          <div className="h-8 w-px bg-ink-700" />
+          <div>
+            <h1 className="text-lg font-semibold text-ink-50">Applause</h1>
+            <p className="text-sm text-ink-300">{org?.name ?? "Organização"}</p>
+          </div>
         </div>
-        <button onClick={signOut} className="text-sm text-slate-400 hover:text-slate-200">
+        <button onClick={signOut} className="text-sm text-ink-300 hover:text-ink-50">
           Sair
         </button>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {MODULES.map((m) => (
           <Link
             key={m.to}
             to={m.to}
-            className="rounded-xl border border-slate-800 bg-slate-900 p-6 transition hover:border-indigo-600"
+            className="rounded-lg border border-ink-700 bg-ink-850 p-4 shadow-sm transition hover:border-brand-600 hover:shadow-brand-900/20"
           >
-            <p className="font-medium">{m.label}</p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="font-medium text-ink-50">{m.label}</p>
+            <p className="mt-1 text-xs text-ink-400">
               {m.ready ? "Disponível" : "Em construção"}
             </p>
           </Link>
         ))}
       </div>
+
+      <footer className="mt-12 flex items-center justify-center gap-2 text-xs text-ink-500">
+        <Logo className="h-4 opacity-60" />
+      </footer>
     </div>
   );
 }

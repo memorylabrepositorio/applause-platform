@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import BackLink from "@/components/BackLink";
 import {
   concluirTarefa,
   criarNota,
@@ -202,52 +203,50 @@ export default function Atendimento() {
 
   if (error && !data) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-950 text-slate-100">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-ink-900 text-ink-50">
         <p className="text-red-400">Não foi possível carregar os dados: {error}</p>
-        <Link to="/" className="text-indigo-400 hover:text-indigo-300">← Voltar</Link>
+        <Link to="/" className="text-brand-400 hover:text-brand-300">← Voltar</Link>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
+      <div className="flex min-h-screen items-center justify-center bg-ink-900 text-ink-300">
         Carregando atendimento…
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 text-slate-100 sm:p-8">
-      <header className="mb-6 flex items-center justify-between">
+    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+      <header className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">CRM de Atendimento</h1>
-          <p className="flex items-center gap-2 text-sm text-slate-500">
+          <h1 className="text-xl font-semibold">CRM de Atendimento</h1>
+          <p className="flex items-center gap-2 text-sm text-ink-400">
             <span
               className={`inline-block h-2 w-2 rounded-full ${
-                statusKind === "ok" ? "bg-emerald-500" : statusKind === "err" ? "bg-red-500" : "bg-slate-600"
+                statusKind === "ok" ? "bg-emerald-500" : statusKind === "err" ? "bg-red-500" : "bg-ink-500"
               }`}
             />
             {statusText}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => refresh(true)} className="text-sm text-slate-400 hover:text-slate-200">
+          <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
             ↻ Atualizar
           </button>
-          <Link to="/" className="text-sm text-slate-400 hover:text-slate-200">
-            ← Painel principal
-          </Link>
+        <BackLink />
         </div>
       </header>
 
       {/* filtros */}
-      <div className="mb-6 flex flex-wrap items-end gap-3">
+      <div className="mb-4 flex flex-wrap items-end gap-3">
         <FilterField label="Ano">
           <select
             value={filters.ano}
             onChange={(e) => setFilters((f) => ({ ...f, ano: e.target.value }))}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm"
+            className="rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
           >
             <option value="">Todos os anos</option>
             {anos.lista.map((a) => (
@@ -260,7 +259,7 @@ export default function Atendimento() {
           <select
             value={filters.instituicao}
             onChange={(e) => setFilters((f) => ({ ...f, instituicao: e.target.value }))}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm"
+            className="rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
           >
             <option value="">Todas</option>
             {instituicoes.map(({ inst, count }) => (
@@ -274,7 +273,7 @@ export default function Atendimento() {
           <select
             value={filters.agendado}
             onChange={(e) => setFilters((f) => ({ ...f, agendado: e.target.value as Filters["agendado"] }))}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm"
+            className="rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
           >
             <option value="">Todos</option>
             <option value="sim">Sim</option>
@@ -285,7 +284,7 @@ export default function Atendimento() {
           <select
             value={filters.atendido}
             onChange={(e) => setFilters((f) => ({ ...f, atendido: e.target.value as Filters["atendido"] }))}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm"
+            className="rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
           >
             <option value="">Todos</option>
             <option value="sim">Sim</option>
@@ -296,41 +295,41 @@ export default function Atendimento() {
           value={filters.search}
           onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
           placeholder="Buscar nome, CPF, telefone…"
-          className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm"
+          className="rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
         />
         <button
           onClick={() => setFilters(EMPTY_FILTERS)}
-          className="rounded-full border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200"
+          className="rounded-full border border-ink-600 px-2.5 py-1 text-xs text-ink-300 hover:text-ink-50"
         >
           Limpar filtros
         </button>
         <button
           onClick={() => exportAlunosCSV(filtrados)}
-          className="ml-auto rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-600 hover:text-indigo-300"
+          className="ml-auto rounded-md border border-ink-600 px-2.5 py-1 text-sm text-ink-100 hover:border-brand-600 hover:text-brand-300"
         >
           ⭳ Exportar CSV
         </button>
       </div>
 
       {/* KPIs */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi label="Alunos (filtro atual)" value={kpis.total} />
         <Kpi label="Agendados" value={kpis.agendados} />
         <Kpi label="Não agendados" value={kpis.naoAgendados} />
         <Kpi label="Atendidos" value={kpis.atendidos} />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* tabela de alunos */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 lg:col-span-2">
-          <p className="mb-3 text-sm font-medium text-slate-300">
+        <div className="rounded-lg border border-ink-800 bg-ink-850 p-3 lg:col-span-2">
+          <p className="mb-3 text-sm font-medium text-ink-100">
             {ordenados.length.toLocaleString("pt-BR")} aluno(s) encontrado(s)
             {ordenados.length > RENDER_CAP ? ` — mostrando ${RENDER_CAP}` : ""}
           </p>
           <div className="max-h-[36rem] overflow-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-slate-900">
-                <tr className="border-b border-slate-800 text-left text-xs uppercase text-slate-500">
+              <thead className="sticky top-0 bg-ink-850">
+                <tr className="border-b border-ink-800 text-left text-xs uppercase text-ink-400">
                   {ALUNO_COLS.map((c) => (
                     <th
                       key={c.key}
@@ -347,7 +346,7 @@ export default function Atendimento() {
                   <tr
                     key={a.codigo}
                     onClick={() => setDrawerCodigo(a.codigo)}
-                    className="cursor-pointer border-b border-slate-800/50 hover:bg-slate-800/50"
+                    className="cursor-pointer border-b border-ink-800/50 hover:bg-ink-800/50"
                   >
                     <td className="py-2">{a.nome}</td>
                     <td className="py-2">{a.cpf || "—"}</td>
@@ -376,7 +375,7 @@ export default function Atendimento() {
                 ))}
                 {!ordenados.length && (
                   <tr>
-                    <td colSpan={9} className="py-4 text-center text-slate-500">
+                    <td colSpan={9} className="py-4 text-center text-ink-400">
                       Nenhum aluno encontrado com esses filtros.
                     </td>
                   </tr>
@@ -387,24 +386,24 @@ export default function Atendimento() {
         </div>
 
         {/* tarefas globais */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-          <p className="mb-3 text-sm font-medium text-slate-300">
+        <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
+          <p className="mb-3 text-sm font-medium text-ink-100">
             Tarefas pendentes ({tarefasGlobais.length})
           </p>
           <div className="max-h-[36rem] space-y-2 overflow-auto">
-            {!tarefasGlobais.length && <p className="text-sm text-slate-500">Nenhuma tarefa pendente. 🎉</p>}
+            {!tarefasGlobais.length && <p className="text-sm text-ink-400">Nenhuma tarefa pendente. 🎉</p>}
             {tarefasGlobais.map(({ tarefa, aluno }) => {
               const atrasada = !!(tarefa.prazo && tarefa.prazo < todayISO());
               return (
                 <div
                   key={tarefa.id}
-                  className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
-                    atrasada ? "border-red-900 bg-red-950/30" : "border-slate-800 bg-slate-950"
+                  className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 ${
+                    atrasada ? "border-red-900 bg-red-950/30" : "border-ink-800 bg-ink-900"
                   }`}
                 >
                   <button onClick={() => setDrawerCodigo(aluno.codigo)} className="min-w-0 flex-1 text-left">
                     <p className="truncate text-sm font-medium">{tarefa.motivo}</p>
-                    <p className="truncate text-xs text-slate-500">
+                    <p className="truncate text-xs text-ink-400">
                       {aluno.nome}
                       {aluno.instituicao ? ` · ${aluno.instituicao}` : ""}
                       {tarefa.prazo ? ` · prazo ${fmtDateBR(tarefa.prazo)}${atrasada ? " (atrasada)" : ""}` : ""}
@@ -412,7 +411,7 @@ export default function Atendimento() {
                   </button>
                   <button
                     onClick={() => handleConcluirTarefa(tarefa.id)}
-                    className="whitespace-nowrap rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-emerald-600 hover:text-emerald-300"
+                    className="whitespace-nowrap rounded-md border border-ink-600 px-2 py-1 text-xs text-ink-100 hover:border-emerald-600 hover:text-emerald-300"
                   >
                     Concluir
                   </button>
@@ -424,12 +423,12 @@ export default function Atendimento() {
       </div>
 
       {/* agendamentos órfãos */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+      <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
         <button
           onClick={() => setOrfaosOpen((v) => !v)}
           className="flex w-full items-center justify-between text-left"
         >
-          <span className="text-sm font-medium text-slate-300">
+          <span className="text-sm font-medium text-ink-100">
             {orfaosOpen ? "▾" : "▸"} Agendamentos sem cliente correspondente ({data.agendamentosOrfaos.length})
           </span>
         </button>
@@ -439,12 +438,12 @@ export default function Atendimento() {
               value={orfaosFilter}
               onChange={(e) => setOrfaosFilter(e.target.value)}
               placeholder="Buscar nome, nº controle…"
-              className="mb-3 w-full max-w-sm rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+              className="mb-3 w-full max-w-sm rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
             />
             <div className="max-h-72 overflow-auto">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-slate-900">
-                  <tr className="border-b border-slate-800 text-left text-xs uppercase text-slate-500">
+                <thead className="sticky top-0 bg-ink-850">
+                  <tr className="border-b border-ink-800 text-left text-xs uppercase text-ink-400">
                     <th className="py-2">Data</th>
                     <th className="py-2">Horário</th>
                     <th className="py-2">Studio</th>
@@ -455,7 +454,7 @@ export default function Atendimento() {
                 </thead>
                 <tbody>
                   {orfaosFiltrados.slice(0, 300).map((a) => (
-                    <tr key={a.codigo} className="border-b border-slate-800/50">
+                    <tr key={a.codigo} className="border-b border-ink-800/50">
                       <td className="py-2">{fmtDateBR(a.data)}</td>
                       <td className="py-2">{a.horario || ""}</td>
                       <td className="py-2">{a.studio || ""}</td>
@@ -466,7 +465,7 @@ export default function Atendimento() {
                   ))}
                   {!orfaosFiltrados.length && (
                     <tr>
-                      <td colSpan={6} className="py-4 text-center text-slate-500">
+                      <td colSpan={6} className="py-4 text-center text-ink-400">
                         {data.agendamentosOrfaos.length ? "Nenhum resultado para essa busca." : "Nenhum agendamento órfão encontrado. 🎉"}
                       </td>
                     </tr>
@@ -482,21 +481,21 @@ export default function Atendimento() {
       {drawerAluno && (
         <>
           <div onClick={() => setDrawerCodigo(null)} className="fixed inset-0 z-40 bg-black/60" />
-          <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col overflow-auto border-l border-slate-800 bg-slate-950 p-5">
+          <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col overflow-auto border-l border-ink-800 bg-ink-900 p-5">
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <h2 className="text-lg font-semibold">{drawerAluno.nome}</h2>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-ink-400">
                   {drawerAluno.instituicao || "—"}
                   {drawerAluno.curso ? ` · ${drawerAluno.curso}` : ""}
                 </p>
               </div>
-              <button onClick={() => setDrawerCodigo(null)} className="text-slate-500 hover:text-slate-200">
+              <button onClick={() => setDrawerCodigo(null)} className="text-ink-400 hover:text-ink-50">
                 ✕
               </button>
             </div>
 
-            <div className="mb-4 rounded-lg border border-slate-800 bg-slate-900 p-3 text-sm text-slate-300">
+            <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3 text-sm text-ink-100">
               <p>CPF: {drawerAluno.cpf || "—"}</p>
               <p>Telefone: {drawerAluno.telefone || "—"}</p>
               <p>
@@ -512,7 +511,7 @@ export default function Atendimento() {
             <Section title="Agendamentos">
               {drawerAluno.agendamentos.length ? (
                 drawerAluno.agendamentos.map((ag) => (
-                  <div key={ag.codigo} className="border-b border-slate-800 py-1.5 text-sm">
+                  <div key={ag.codigo} className="border-b border-ink-800 py-1.5 text-sm">
                     {fmtDateBR(ag.data)}
                     {ag.horario ? ` · ${ag.horario}` : ""}
                     {ag.studio ? ` · ${ag.studio}` : ""} ·{" "}
@@ -520,7 +519,7 @@ export default function Atendimento() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-500">Nenhum agendamento encontrado.</p>
+                <p className="text-sm text-ink-400">Nenhum agendamento encontrado.</p>
               )}
             </Section>
 
@@ -533,13 +532,13 @@ export default function Atendimento() {
                     return (
                       <div
                         key={t.id}
-                        className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
-                          atrasada ? "border-red-900 bg-red-950/30" : "border-slate-800 bg-slate-900"
+                        className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 ${
+                          atrasada ? "border-red-900 bg-red-950/30" : "border-ink-800 bg-ink-850"
                         }`}
                       >
                         <div className={concluida ? "line-through opacity-60" : ""}>
                           <p className="text-sm font-medium">{t.motivo}</p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-ink-400">
                             {t.prazo ? `prazo ${fmtDateBR(t.prazo)}${atrasada ? " (atrasada)" : ""}` : "sem prazo"}
                           </p>
                         </div>
@@ -548,7 +547,7 @@ export default function Atendimento() {
                         ) : (
                           <button
                             onClick={() => handleConcluirTarefa(t.id)}
-                            className="whitespace-nowrap rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-emerald-600 hover:text-emerald-300"
+                            className="whitespace-nowrap rounded-md border border-ink-600 px-2 py-1 text-xs text-ink-100 hover:border-emerald-600 hover:text-emerald-300"
                           >
                             Concluir
                           </button>
@@ -558,24 +557,24 @@ export default function Atendimento() {
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">Nenhuma tarefa ainda.</p>
+                <p className="text-sm text-ink-400">Nenhuma tarefa ainda.</p>
               )}
               <div className="mt-3 flex flex-wrap gap-2">
                 <input
                   value={novaTarefaMotivo}
                   onChange={(e) => setNovaTarefaMotivo(e.target.value)}
                   placeholder="O que precisa ser feito?"
-                  className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm"
+                  className="min-w-0 flex-1 rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
                 />
                 <input
                   type="date"
                   value={novaTarefaPrazo}
                   onChange={(e) => setNovaTarefaPrazo(e.target.value)}
-                  className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm"
+                  className="rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
                 />
                 <button
                   onClick={handleAddTarefa}
-                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+                  className="rounded-md bg-brand-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-brand-500"
                 >
                   Adicionar
                 </button>
@@ -586,8 +585,8 @@ export default function Atendimento() {
               {drawerNotas.length ? (
                 <div className="space-y-2">
                   {drawerNotas.map((n) => (
-                    <div key={n.id} className="rounded-lg border border-slate-800 bg-slate-900 p-2 text-sm">
-                      <p className="text-xs text-slate-500">
+                    <div key={n.id} className="rounded-lg border border-ink-800 bg-ink-850 p-2 text-sm">
+                      <p className="text-xs text-ink-400">
                         {n.tipo}
                         {n.autor ? ` · ${n.autor}` : ""} · {fmtDateTimeBR(n.criado_em)}
                       </p>
@@ -596,14 +595,14 @@ export default function Atendimento() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">Nenhuma anotação ainda.</p>
+                <p className="text-sm text-ink-400">Nenhuma anotação ainda.</p>
               )}
               <div className="mt-3 space-y-2">
                 <div className="flex gap-2">
                   <select
                     value={novaNotaTipo}
                     onChange={(e) => setNovaNotaTipo(e.target.value)}
-                    className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm"
+                    className="rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
                   >
                     <option value="contato">Contato</option>
                     <option value="observacao">Observação</option>
@@ -616,11 +615,11 @@ export default function Atendimento() {
                   onChange={(e) => setNovaNotaTexto(e.target.value)}
                   placeholder="O que foi conversado?"
                   rows={3}
-                  className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm"
+                  className="w-full rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
                 />
                 <button
                   onClick={handleAddNota}
-                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+                  className="rounded-md bg-brand-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-brand-500"
                 >
                   Salvar anotação
                 </button>
@@ -651,8 +650,8 @@ function recomputeAlunosTarefas(alunos: Aluno[], tarefas: Aluno["tarefas"]): Alu
 
 function Kpi({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+    <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
+      <p className="text-xs uppercase tracking-wide text-ink-400">{label}</p>
       <p className="mt-1 text-lg font-semibold">{value.toLocaleString("pt-BR")}</p>
     </div>
   );
@@ -661,7 +660,7 @@ function Kpi({ label, value }: { label: string; value: number }) {
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs uppercase tracking-wide text-slate-500">{label}</span>
+      <span className="text-xs uppercase tracking-wide text-ink-400">{label}</span>
       {children}
     </label>
   );
@@ -671,7 +670,7 @@ function Pill({ good, children }: { good: boolean; children: React.ReactNode }) 
   return (
     <span
       className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-xs ${
-        good ? "border-emerald-800 bg-emerald-950 text-emerald-300" : "border-slate-700 bg-slate-900 text-slate-400"
+        good ? "border-emerald-800 bg-emerald-950 text-emerald-300" : "border-ink-600 bg-ink-850 text-ink-300"
       }`}
     >
       {children}
@@ -682,7 +681,7 @@ function Pill({ good, children }: { good: boolean; children: React.ReactNode }) 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">{title}</p>
       {children}
     </div>
   );

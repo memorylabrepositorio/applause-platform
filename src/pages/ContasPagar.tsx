@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import BackLink from "@/components/BackLink";
 import { atualizarConta, criarConta, excluirConta, loadContasPagar } from "@/lib/contaspagar/fetch";
 import {
   EMPTY_FILTERS,
@@ -152,76 +153,74 @@ export default function ContasPagar() {
 
   if (loadError && !contas) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-950 text-slate-100">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-ink-900 text-ink-50">
         <p className="text-red-400">Não foi possível carregar os dados: {loadError}</p>
-        <Link to="/" className="text-indigo-400 hover:text-indigo-300">← Voltar</Link>
+        <Link to="/" className="text-brand-400 hover:text-brand-300">← Voltar</Link>
       </div>
     );
   }
 
   if (!contas) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
+      <div className="flex min-h-screen items-center justify-center bg-ink-900 text-ink-300">
         Carregando contas a pagar…
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 text-slate-100 sm:p-8">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Contas a Pagar — Orçamento</h1>
-          <p className="flex items-center gap-2 text-sm text-slate-500">
+          <h1 className="text-xl font-semibold">Contas a Pagar — Orçamento</h1>
+          <p className="flex items-center gap-2 text-sm text-ink-400">
             <span
               className={`inline-block h-2 w-2 rounded-full ${
-                statusKind === "ok" ? "bg-emerald-500" : statusKind === "err" ? "bg-red-500" : "bg-slate-600"
+                statusKind === "ok" ? "bg-emerald-500" : statusKind === "err" ? "bg-red-500" : "bg-ink-500"
               }`}
             />
             {statusText}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => refresh(true)} className="text-sm text-slate-400 hover:text-slate-200">
+          <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
             ↻ Atualizar
           </button>
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+            className="rounded-md bg-brand-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-brand-500"
           >
             + Nova conta
           </button>
-          <Link to="/lucro" className="text-sm text-slate-400 hover:text-slate-200">
+          <Link to="/lucro" className="text-sm text-ink-300 hover:text-ink-50">
             Lucro por contrato →
           </Link>
-          <Link to="/" className="text-sm text-slate-400 hover:text-slate-200">
-            ← Painel principal
-          </Link>
+        <BackLink />
         </div>
       </header>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Kpi label="Previsto" value={fmtBRL(kpis.totalPrevisto)} />
         <Kpi label="Pago" value={fmtBRL(kpis.totalPago)} tone="emerald" />
         <Kpi label="Falta pagar" value={fmtBRL(kpis.totalRestante)} tone="red" />
       </div>
 
       {showForm && (
-        <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
-          <p className="mb-3 text-sm font-medium text-slate-300">Nova conta a pagar</p>
+        <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+          <p className="mb-3 text-sm font-medium text-ink-100">Nova conta a pagar</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Nº controle do contrato">
               <input
                 value={form.contrato_nro_controle}
                 onChange={(e) => setForm((f) => ({ ...f, contrato_nro_controle: e.target.value }))}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
             <Field label="Instituição">
               <input
                 value={form.instituicao}
                 onChange={(e) => setForm((f) => ({ ...f, instituicao: e.target.value }))}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
             <Field label="Mês de referência">
@@ -229,7 +228,7 @@ export default function ContasPagar() {
                 type="date"
                 value={form.mes_referencia}
                 onChange={(e) => setForm((f) => ({ ...f, mes_referencia: e.target.value }))}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
             <div className="sm:col-span-2 lg:col-span-3">
@@ -238,7 +237,7 @@ export default function ContasPagar() {
                   value={form.descricao}
                   onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
                   placeholder="ex.: Pagamento formatura São José — parcela 1"
-                  className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                  className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
                 />
               </Field>
             </div>
@@ -247,14 +246,14 @@ export default function ContasPagar() {
                 value={form.valor_previsto}
                 onChange={(e) => setForm((f) => ({ ...f, valor_previsto: e.target.value }))}
                 placeholder="0,00"
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
             <Field label="Valor já pago (R$)">
               <input
                 value={form.valor_pago}
                 onChange={(e) => setForm((f) => ({ ...f, valor_pago: e.target.value }))}
-                className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
               />
             </Field>
           </div>
@@ -263,7 +262,7 @@ export default function ContasPagar() {
             <button
               onClick={handleCriar}
               disabled={saving}
-              className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+              className="rounded-md bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
             >
               Salvar conta
             </button>
@@ -273,7 +272,7 @@ export default function ContasPagar() {
                 setForm(EMPTY_FORM);
                 setFormError("");
               }}
-              className="text-sm text-slate-400 hover:text-slate-200"
+              className="text-sm text-ink-300 hover:text-ink-50"
             >
               Cancelar
             </button>
@@ -285,7 +284,7 @@ export default function ContasPagar() {
         <select
           value={filters.status}
           onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value as "" | StatusConta }))}
-          className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+          className="rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
         >
           <option value="">Todos os status</option>
           <option value="pendente">Pendente</option>
@@ -296,36 +295,36 @@ export default function ContasPagar() {
           value={filters.search}
           onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
           placeholder="Buscar descrição, instituição, contrato…"
-          className="min-w-[240px] flex-1 rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+          className="min-w-[240px] flex-1 rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
         />
         {(filters.status || filters.search) && (
           <button
             onClick={() => setFilters(EMPTY_FILTERS)}
-            className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+            className="rounded-md border border-ink-600 px-2.5 py-1 text-sm text-ink-300 hover:text-ink-50"
           >
             Limpar filtros
           </button>
         )}
-        <span className="text-xs text-slate-500">{filtradas.length} conta(s)</span>
+        <span className="text-xs text-ink-400">{filtradas.length} conta(s)</span>
       </div>
 
-      <div className="overflow-auto rounded-xl border border-slate-800 bg-slate-900">
+      <div className="overflow-auto rounded-lg border border-ink-800 bg-ink-850">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-800 text-xs text-slate-500">
+          <thead className="border-b border-ink-800 text-xs text-ink-400">
             <tr>
-              <th className="px-3 py-2">Descrição</th>
-              <th className="px-3 py-2">Instituição</th>
-              <th className="px-3 py-2">Mês</th>
-              <th className="px-3 py-2">Previsto</th>
-              <th className="px-3 py-2">Pago</th>
-              <th className="px-3 py-2">Falta</th>
-              <th className="px-3 py-2">Status</th>
+              <th className="px-2.5 py-1.5">Descrição</th>
+              <th className="px-2.5 py-1.5">Instituição</th>
+              <th className="px-2.5 py-1.5">Mês</th>
+              <th className="px-2.5 py-1.5">Previsto</th>
+              <th className="px-2.5 py-1.5">Pago</th>
+              <th className="px-2.5 py-1.5">Falta</th>
+              <th className="px-2.5 py-1.5">Status</th>
             </tr>
           </thead>
           <tbody>
             {!filtradas.length && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
+                <td colSpan={7} className="px-3 py-6 text-center text-ink-400">
                   Nenhuma conta encontrada.
                 </td>
               </tr>
@@ -334,15 +333,15 @@ export default function ContasPagar() {
               <tr
                 key={c.id}
                 onClick={() => openDrawer(c)}
-                className="cursor-pointer border-b border-slate-800/60 hover:bg-slate-800/40"
+                className="cursor-pointer border-b border-ink-800/60 hover:bg-ink-800/40"
               >
-                <td className="px-3 py-2">{c.descricao}</td>
-                <td className="px-3 py-2 text-slate-400">{c.instituicao || "—"}</td>
-                <td className="px-3 py-2 text-slate-400">{fmtMesBR(c.mes_referencia) || "—"}</td>
-                <td className="px-3 py-2">{fmtBRL(c.valor_previsto)}</td>
-                <td className="px-3 py-2 text-emerald-400">{fmtBRL(c.valor_pago)}</td>
-                <td className="px-3 py-2 text-slate-400">{fmtBRL(saldoRestante(c))}</td>
-                <td className="px-3 py-2">
+                <td className="px-2.5 py-1.5">{c.descricao}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{c.instituicao || "—"}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{fmtMesBR(c.mes_referencia) || "—"}</td>
+                <td className="px-2.5 py-1.5">{fmtBRL(c.valor_previsto)}</td>
+                <td className="px-2.5 py-1.5 text-emerald-400">{fmtBRL(c.valor_pago)}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{fmtBRL(saldoRestante(c))}</td>
+                <td className="px-2.5 py-1.5">
                   <StatusBadge status={c.status} />
                 </td>
               </tr>
@@ -354,15 +353,15 @@ export default function ContasPagar() {
       {drawerConta && (
         <div className="fixed inset-0 z-20 flex justify-end bg-black/50" onClick={() => setDrawerId(null)}>
           <div
-            className="h-full w-full max-w-md overflow-auto border-l border-slate-800 bg-slate-950 p-5"
+            className="h-full w-full max-w-md overflow-auto border-l border-ink-800 bg-ink-900 p-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <p className="text-lg font-medium">{drawerConta.descricao}</p>
-                <p className="text-sm text-slate-500">{drawerConta.instituicao || "—"}</p>
+                <p className="text-sm text-ink-400">{drawerConta.instituicao || "—"}</p>
               </div>
-              <button onClick={() => setDrawerId(null)} className="text-slate-500 hover:text-slate-200">✕</button>
+              <button onClick={() => setDrawerId(null)} className="text-ink-400 hover:text-ink-50">✕</button>
             </div>
 
             <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
@@ -376,17 +375,17 @@ export default function ContasPagar() {
               <StatusBadge status={drawerConta.status} />
             </div>
 
-            <div className="mb-4 rounded-lg border border-slate-800 bg-slate-900 p-3">
-              <p className="mb-2 text-xs text-slate-500">Atualizar valor pago</p>
+            <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+              <p className="mb-2 text-xs text-ink-400">Atualizar valor pago</p>
               <div className="mb-2 flex gap-2">
                 <input
                   value={pagoValor}
                   onChange={(e) => setPagoValor(e.target.value)}
-                  className="flex-1 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-sm"
+                  className="flex-1 rounded-md border border-ink-600 bg-ink-800 px-2 py-1 text-sm"
                 />
                 <button
                   onClick={handleAtualizarPago}
-                  className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500"
+                  className="rounded-md bg-emerald-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-emerald-500"
                 >
                   Salvar
                 </button>
@@ -400,7 +399,7 @@ export default function ContasPagar() {
 
             <button
               onClick={handleExcluir}
-              className="w-full rounded-md border border-red-900 bg-red-950/50 px-3 py-1.5 text-sm text-red-400 hover:bg-red-950"
+              className="w-full rounded-md border border-red-900 bg-red-950/50 px-2.5 py-1 text-sm text-red-400 hover:bg-red-950"
             >
               Remover conta
             </button>
@@ -412,11 +411,11 @@ export default function ContasPagar() {
 }
 
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: "emerald" | "red" }) {
-  const toneClass = tone === "emerald" ? "text-emerald-400" : tone === "red" ? "text-red-400" : "text-slate-100";
+  const toneClass = tone === "emerald" ? "text-emerald-400" : tone === "red" ? "text-red-400" : "text-ink-50";
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className={`mt-1 text-xl font-semibold ${toneClass}`}>{value}</p>
+    <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
+      <p className="text-xs text-ink-400">{label}</p>
+      <p className={`mt-1 text-lg font-semibold ${toneClass}`}>{value}</p>
     </div>
   );
 }
@@ -424,7 +423,7 @@ function Kpi({ label, value, tone }: { label: string; value: string; tone?: "eme
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-xs text-slate-500">{label}</label>
+      <label className="mb-1 block text-xs text-ink-400">{label}</label>
       {children}
     </div>
   );
@@ -433,7 +432,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-xs text-ink-400">{label}</p>
       <p>{value}</p>
     </div>
   );

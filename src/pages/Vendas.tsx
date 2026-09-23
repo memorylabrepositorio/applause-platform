@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import BackLink from "@/components/BackLink";
 import {
   BarChart,
   Bar,
@@ -132,41 +133,39 @@ export default function Vendas() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-950 text-slate-100">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-ink-900 text-ink-50">
         <p className="text-red-400">Não foi possível carregar os dados: {error}</p>
-        <Link to="/" className="text-indigo-400 hover:text-indigo-300">← Voltar</Link>
+        <Link to="/" className="text-brand-400 hover:text-brand-300">← Voltar</Link>
       </div>
     );
   }
 
   if (!rows) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
+      <div className="flex min-h-screen items-center justify-center bg-ink-900 text-ink-300">
         Carregando vendas…
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 text-slate-100 sm:p-8">
-      <header className="mb-6 flex items-center justify-between">
+    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+      <header className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Painel de Vendas</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-xl font-semibold">Painel de Vendas</h1>
+          <p className="text-sm text-ink-400">
             {fmtInt(salesOnly.length)} de {fmtInt(rows.filter((r) => r.descricao !== "NAO COMPROU").length)} vendas
           </p>
         </div>
-        <Link to="/" className="text-sm text-slate-400 hover:text-slate-200">
-          ← Painel principal
-        </Link>
+        <BackLink />
       </header>
 
       {/* filtros */}
-      <div className="mb-6 flex flex-wrap gap-3">
+      <div className="mb-4 flex flex-wrap gap-3">
         <select
           value={filters.year || ""}
           onChange={(e) => setFilters((f) => ({ ...f, year: e.target.value || undefined }))}
-          className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm"
+          className="rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
         >
           <option value="">Todos os anos</option>
           {years.map((y) => (
@@ -176,7 +175,7 @@ export default function Vendas() {
         {filters.vendedor && (
           <button
             onClick={() => setFilters((f) => ({ ...f, vendedor: undefined }))}
-            className="rounded-md border border-indigo-700 bg-indigo-950 px-3 py-1.5 text-sm text-indigo-300"
+            className="rounded-md border border-brand-700 bg-brand-950 px-2.5 py-1 text-sm text-brand-300"
           >
             Vendedor: {filters.vendedor} ✕
           </button>
@@ -184,7 +183,7 @@ export default function Vendas() {
         {filters.estudio && (
           <button
             onClick={() => setFilters((f) => ({ ...f, estudio: undefined }))}
-            className="rounded-md border border-indigo-700 bg-indigo-950 px-3 py-1.5 text-sm text-indigo-300"
+            className="rounded-md border border-brand-700 bg-brand-950 px-2.5 py-1 text-sm text-brand-300"
           >
             Estúdio: {filters.estudio} ✕
           </button>
@@ -192,7 +191,7 @@ export default function Vendas() {
       </div>
 
       {/* KPIs */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Kpi label="Faturamento total" value={fmtBRL(kpis.totalRevenue)} />
         <Kpi label="Itens vendidos" value={fmtInt(kpis.itemCount)} />
         <Kpi label="Ticket médio" value={fmtBRL(kpis.ticketMedio)} />
@@ -201,8 +200,8 @@ export default function Vendas() {
       </div>
 
       {/* faturamento mensal */}
-      <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
-        <p className="mb-3 text-sm font-medium text-slate-300">Faturamento por mês</p>
+      <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+        <p className="mb-3 text-sm font-medium text-ink-100">Faturamento por mês</p>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={monthly}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -217,13 +216,13 @@ export default function Vendas() {
         </ResponsiveContainer>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* ranking vendedores */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-          <p className="mb-3 text-sm font-medium text-slate-300">Vendas por vendedor</p>
+        <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
+          <p className="mb-3 text-sm font-medium text-ink-100">Vendas por vendedor</p>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-800 text-left text-xs uppercase text-slate-500">
+              <tr className="border-b border-ink-800 text-left text-xs uppercase text-ink-400">
                 <th className="py-2">Vendedor</th>
                 <th className="py-2 text-right">Faturamento</th>
                 <th className="py-2 text-right">Itens</th>
@@ -235,7 +234,7 @@ export default function Vendas() {
                 <tr
                   key={v.key}
                   onClick={() => setFilters((f) => ({ ...f, vendedor: v.key }))}
-                  className="cursor-pointer border-b border-slate-800/50 hover:bg-slate-800/50"
+                  className="cursor-pointer border-b border-ink-800/50 hover:bg-ink-800/50"
                 >
                   <td className="py-2">{v.label}</td>
                   <td className="py-2 text-right">{fmtBRL(v.revenue)}</td>
@@ -245,7 +244,7 @@ export default function Vendas() {
               ))}
               {!vendedores.length && (
                 <tr>
-                  <td colSpan={4} className="py-4 text-center text-slate-500">
+                  <td colSpan={4} className="py-4 text-center text-ink-400">
                     Sem vendas no período selecionado.
                   </td>
                 </tr>
@@ -262,22 +261,22 @@ export default function Vendas() {
         />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <BarListCard title="Faturamento por instituição" items={instituicoes} />
         <BarListCard title="Faturamento por produto" items={produtos} />
       </div>
 
       {/* alunos: comprou/não comprou, agendado/não agendado */}
-      <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
+      <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium text-slate-300">
+          <p className="text-sm font-medium text-ink-100">
             Alunos ({fmtInt(alunos.length)} de {fmtInt(filtered.length)})
           </p>
           <input
             value={alunosFilter}
             onChange={(e) => setAlunosFilter(e.target.value)}
             placeholder="Buscar aluno, vendedor, instituição…"
-            className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+            className="rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
           />
         </div>
         <div className="mb-3 flex flex-wrap gap-2 text-xs">
@@ -299,8 +298,8 @@ export default function Vendas() {
         </div>
         <div className="max-h-96 overflow-auto">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-slate-900">
-              <tr className="border-b border-slate-800 text-left text-xs uppercase text-slate-500">
+            <thead className="sticky top-0 bg-ink-850">
+              <tr className="border-b border-ink-800 text-left text-xs uppercase text-ink-400">
                 <th className="py-2">Data</th>
                 <th className="py-2">Aluno</th>
                 <th className="py-2">Instituição/Turma</th>
@@ -316,7 +315,7 @@ export default function Vendas() {
                 const agendou = agendaStatus(r) === "sim";
                 const inst = institutionLabelOf(r);
                 return (
-                  <tr key={i} className="border-b border-slate-800/50">
+                  <tr key={i} className="border-b border-ink-800/50">
                     <td className="py-2">{r.dataVenda || "—"}</td>
                     <td className="py-2">{titleCase(r.cliente)}</td>
                     <td className="py-2">{inst ? titleCase(inst) : "—"}</td>
@@ -333,7 +332,7 @@ export default function Vendas() {
               })}
               {!alunos.length && (
                 <tr>
-                  <td colSpan={7} className="py-4 text-center text-slate-500">Nenhum resultado.</td>
+                  <td colSpan={7} className="py-4 text-center text-ink-400">Nenhum resultado.</td>
                 </tr>
               )}
             </tbody>
@@ -342,22 +341,22 @@ export default function Vendas() {
       </div>
 
       {/* vendas sem sessão na agenda */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+      <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium text-slate-300">
+          <p className="text-sm font-medium text-ink-100">
             Vendas sem sessão na agenda ({fmtInt(unmatched.length)})
           </p>
           <input
             value={unmatchedFilter}
             onChange={(e) => setUnmatchedFilter(e.target.value)}
             placeholder="Buscar cliente, vendedor, CPF…"
-            className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+            className="rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
           />
         </div>
         <div className="max-h-80 overflow-auto">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-slate-900">
-              <tr className="border-b border-slate-800 text-left text-xs uppercase text-slate-500">
+            <thead className="sticky top-0 bg-ink-850">
+              <tr className="border-b border-ink-800 text-left text-xs uppercase text-ink-400">
                 <th className="py-2">Data venda</th>
                 <th className="py-2">Vendedor</th>
                 <th className="py-2">Cliente</th>
@@ -368,7 +367,7 @@ export default function Vendas() {
             </thead>
             <tbody>
               {unmatched.slice(0, 300).map((r, i) => (
-                <tr key={i} className="border-b border-slate-800/50">
+                <tr key={i} className="border-b border-ink-800/50">
                   <td className="py-2">{r.dataVenda}</td>
                   <td className="py-2">{vendedorLabel(r)}</td>
                   <td className="py-2">{titleCase(r.cliente)}</td>
@@ -379,7 +378,7 @@ export default function Vendas() {
               ))}
               {!unmatched.length && (
                 <tr>
-                  <td colSpan={6} className="py-4 text-center text-slate-500">Nenhum resultado.</td>
+                  <td colSpan={6} className="py-4 text-center text-ink-400">Nenhum resultado.</td>
                 </tr>
               )}
             </tbody>
@@ -392,8 +391,8 @@ export default function Vendas() {
 
 function Kpi({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+    <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
+      <p className="text-xs uppercase tracking-wide text-ink-400">{label}</p>
       <p className="mt-1 text-lg font-semibold">{value}</p>
     </div>
   );
@@ -410,8 +409,8 @@ function BarListCard({
 }) {
   const max = items[0]?.value || 1;
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-      <p className="mb-3 text-sm font-medium text-slate-300">{title}</p>
+    <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
+      <p className="mb-3 text-sm font-medium text-ink-100">{title}</p>
       <div className="space-y-2">
         {items.map((e) => {
           const Comp = onClick ? "button" : "div";
@@ -421,17 +420,17 @@ function BarListCard({
               onClick={onClick ? () => onClick(e.label) : undefined}
               className="block w-full text-left"
             >
-              <div className="mb-1 flex justify-between text-xs text-slate-400">
+              <div className="mb-1 flex justify-between text-xs text-ink-300">
                 <span>{e.label}</span>
                 <span>{fmtBRL(e.value)}</span>
               </div>
-              <div className="h-2 rounded-full bg-slate-800">
-                <div className="h-2 rounded-full bg-indigo-600" style={{ width: `${(e.value / max) * 100}%` }} />
+              <div className="h-2 rounded-full bg-ink-800">
+                <div className="h-2 rounded-full bg-brand-600" style={{ width: `${(e.value / max) * 100}%` }} />
               </div>
             </Comp>
           );
         })}
-        {!items.length && <p className="text-sm text-slate-500">Sem dados no período.</p>}
+        {!items.length && <p className="text-sm text-ink-400">Sem dados no período.</p>}
       </div>
     </div>
   );
@@ -450,7 +449,7 @@ function Pill({
     <button
       onClick={onClick}
       className={`rounded-full border px-3 py-1 ${
-        active ? "border-indigo-600 bg-indigo-950 text-indigo-300" : "border-slate-700 text-slate-400"
+        active ? "border-brand-600 bg-brand-950 text-brand-300" : "border-ink-600 text-ink-300"
       }`}
     >
       {children}

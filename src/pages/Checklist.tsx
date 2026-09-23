@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import BackLink from "@/components/BackLink";
 import { loadContratos, loadEventos, createChecklistFromContrato, updateChecklist, deleteChecklist } from "@/lib/checklist/fetch";
 import {
   ALL_FIELD_KEYS,
@@ -188,16 +189,16 @@ export default function Checklist() {
 
   if (loadError && !eventos) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-950 text-slate-100">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-ink-900 text-ink-50">
         <p className="text-red-400">Não foi possível carregar os dados: {loadError}</p>
-        <Link to="/" className="text-indigo-400 hover:text-indigo-300">← Voltar</Link>
+        <Link to="/" className="text-brand-400 hover:text-brand-300">← Voltar</Link>
       </div>
     );
   }
 
   if (!eventos) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
+      <div className="flex min-h-screen items-center justify-center bg-ink-900 text-ink-300">
         Carregando checklists…
       </div>
     );
@@ -208,17 +209,17 @@ export default function Checklist() {
     const pct = progressOf({ ...currentEvento, ...formValues } as ChecklistEvento);
     const completo = pct === 100;
     return (
-      <div className="min-h-screen bg-slate-950 p-6 text-slate-100 sm:p-8">
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+      <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <button onClick={closeForm} className="mb-2 text-sm text-slate-400 hover:text-slate-200">
+            <button onClick={closeForm} className="mb-2 text-sm text-ink-300 hover:text-ink-50">
               ← Voltar para a lista
             </button>
-            <h1 className="text-xl font-semibold">
+            <h1 className="text-lg font-semibold">
               {currentEvento.instituicao}
               {currentEvento.turma ? ` — ${currentEvento.turma}` : ""}
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-ink-400">
               {currentEvento.curso || "sem curso definido"}
               {currentEvento.data_evento ? ` · ${fmtDateBR(currentEvento.data_evento)}` : ""}
             </p>
@@ -227,26 +228,26 @@ export default function Checklist() {
             <StatusBadge completo={completo} pct={pct} />
             <button
               onClick={() => handleRemover(currentEvento.id)}
-              className="rounded-md border border-red-900 bg-red-950/50 px-3 py-1.5 text-sm text-red-400 hover:bg-red-950"
+              className="rounded-md border border-red-900 bg-red-950/50 px-2.5 py-1 text-sm text-red-400 hover:bg-red-950"
             >
               Remover
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+              className="rounded-md bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
             >
               Salvar
             </button>
           </div>
         </header>
 
-        {saveStatus && <p className="mb-4 text-sm text-slate-400">{saveStatus}</p>}
+        {saveStatus && <p className="mb-4 text-sm text-ink-300">{saveStatus}</p>}
 
         <div className="space-y-6">
           {SECTIONS.map((section) => (
-            <div key={section.title} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <h3 className="mb-3 text-sm font-medium text-slate-300">{section.title}</h3>
+            <div key={section.title} className="rounded-lg border border-ink-800 bg-ink-850 p-3">
+              <h3 className="mb-3 text-sm font-medium text-ink-100">{section.title}</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {section.fields.map((f) => {
                   const val = formValues[f.key] || "";
@@ -254,14 +255,14 @@ export default function Checklist() {
                   const wrapClass = f.long ? "sm:col-span-2 lg:col-span-3" : "";
                   return (
                     <div key={f.key} className={wrapClass}>
-                      <label className="mb-1 block text-xs text-slate-500">{f.label}</label>
+                      <label className="mb-1 block text-xs text-ink-400">{f.label}</label>
                       {f.long ? (
                         <textarea
                           value={val}
                           onChange={(e) => setFormValues((v) => ({ ...v, [f.key]: e.target.value }))}
                           rows={3}
-                          className={`w-full rounded-md border px-3 py-1.5 text-sm ${
-                            filled ? "border-indigo-800 bg-slate-800" : "border-slate-700 bg-slate-900"
+                          className={`w-full rounded-md border px-2.5 py-1 text-sm ${
+                            filled ? "border-brand-800 bg-ink-800" : "border-ink-600 bg-ink-850"
                           }`}
                         />
                       ) : (
@@ -269,8 +270,8 @@ export default function Checklist() {
                           type="text"
                           value={val}
                           onChange={(e) => setFormValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                          className={`w-full rounded-md border px-3 py-1.5 text-sm ${
-                            filled ? "border-indigo-800 bg-slate-800" : "border-slate-700 bg-slate-900"
+                          className={`w-full rounded-md border px-2.5 py-1 text-sm ${
+                            filled ? "border-brand-800 bg-ink-800" : "border-ink-600 bg-ink-850"
                           }`}
                         />
                       )}
@@ -287,38 +288,36 @@ export default function Checklist() {
 
   // ---------- view: lista ----------
   return (
-    <div className="min-h-screen bg-slate-950 p-6 text-slate-100 sm:p-8">
-      <header className="mb-6 flex items-center justify-between">
+    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+      <header className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Checklist de Solenidade</h1>
-          <p className="text-sm text-slate-500 flex items-center gap-2">
+          <h1 className="text-xl font-semibold">Checklist de Solenidade</h1>
+          <p className="text-sm text-ink-400 flex items-center gap-2">
             <span
               className={`inline-block h-2 w-2 rounded-full ${
-                statusKind === "ok" ? "bg-emerald-500" : statusKind === "err" ? "bg-red-500" : "bg-slate-600"
+                statusKind === "ok" ? "bg-emerald-500" : statusKind === "err" ? "bg-red-500" : "bg-ink-500"
               }`}
             />
             {statusText}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => refresh(true)} className="text-sm text-slate-400 hover:text-slate-200">
+          <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
             ↻ Atualizar
           </button>
-          <Link to="/" className="text-sm text-slate-400 hover:text-slate-200">
-            ← Painel principal
-          </Link>
+        <BackLink />
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* novo checklist a partir de contrato */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-          <p className="mb-3 text-sm font-medium text-slate-300">Novo checklist a partir de contrato</p>
+        <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
+          <p className="mb-3 text-sm font-medium text-ink-100">Novo checklist a partir de contrato</p>
           <div className="mb-3 flex flex-wrap gap-2">
             <select
               value={anoSelecionado}
               onChange={(e) => setAnoSelecionado(e.target.value)}
-              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+              className="rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
             >
               <option value="">Todos os anos</option>
               {anos.lista.map((a) => (
@@ -332,7 +331,7 @@ export default function Checklist() {
                 setInstituicaoTerm("");
                 setInstituicaoSelecionada(null);
               }}
-              className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+              className="rounded-md border border-ink-600 px-2.5 py-1 text-sm text-ink-300 hover:text-ink-50"
             >
               Limpar filtros
             </button>
@@ -341,12 +340,12 @@ export default function Checklist() {
             value={instituicaoTerm}
             onChange={(e) => setInstituicaoTerm(e.target.value)}
             placeholder="Buscar instituição…"
-            className="mb-2 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+            className="mb-2 w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
           />
           <select
             value={instituicaoSelecionada || ""}
             onChange={(e) => setInstituicaoSelecionada(e.target.value || null)}
-            className="mb-3 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+            className="mb-3 w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
           >
             <option value="">Selecione a instituição…</option>
             {instituicoes.lista.map((inst) => (
@@ -359,7 +358,7 @@ export default function Checklist() {
           {instituicaoSelecionada && (
             <div className="max-h-80 space-y-2 overflow-auto">
               {!contratosDaInstituicao.length && (
-                <p className="text-sm text-slate-500">Nenhum contrato encontrado pra essa instituição.</p>
+                <p className="text-sm text-ink-400">Nenhum contrato encontrado pra essa instituição.</p>
               )}
               {contratosDaInstituicao.map((c) => {
                 const existente = checklistDoContrato(eventos, c.nro_controle);
@@ -367,11 +366,11 @@ export default function Checklist() {
                   <button
                     key={c.nro_controle}
                     onClick={() => handleAbrirOuCriar(c)}
-                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-left hover:border-slate-700"
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-ink-800 bg-ink-900 px-2.5 py-1.5 text-left hover:border-ink-600"
                   >
                     <div>
                       <p className="text-sm">{c.curso || "(sem curso)"}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-ink-400">
                         {c.ano_periodo || ""} · Nº controle {c.nro_controle}
                         {c.qtde_clientes ? ` · ${c.qtde_clientes} alunos` : ""}
                       </p>
@@ -379,7 +378,7 @@ export default function Checklist() {
                     {existente ? (
                       <StatusBadge completo={existente.status === "completo"} pct={progressOf(existente)} compact />
                     ) : (
-                      <span className="whitespace-nowrap rounded-full border border-slate-700 px-2 py-0.5 text-xs text-slate-400">
+                      <span className="whitespace-nowrap rounded-full border border-ink-600 px-2 py-0.5 text-xs text-ink-300">
                         Começar checklist
                       </span>
                     )}
@@ -391,48 +390,48 @@ export default function Checklist() {
         </div>
 
         {/* lista de checklists existentes */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <p className="text-sm font-medium text-slate-300">
+            <p className="text-sm font-medium text-ink-100">
               Checklists ({eventosFiltrados.length})
             </p>
             <input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar instituição, turma, curso…"
-              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+              className="rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
             />
           </div>
           <div className="max-h-[32rem] space-y-2 overflow-auto">
-            {!eventosFiltrados.length && <p className="text-sm text-slate-500">Nenhum evento encontrado.</p>}
+            {!eventosFiltrados.length && <p className="text-sm text-ink-400">Nenhum evento encontrado.</p>}
             {eventosFiltrados.map((e) => {
               const pct = progressOf(e);
               return (
                 <div
                   key={e.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-ink-800 bg-ink-900 px-2.5 py-1.5"
                 >
                   <button onClick={() => openEvento(e.id)} className="min-w-0 flex-1 text-left">
                     <p className="truncate text-sm">
                       {e.instituicao}
                       {e.turma ? ` — ${e.turma}` : ""}
                     </p>
-                    <p className="truncate text-xs text-slate-500">
+                    <p className="truncate text-xs text-ink-400">
                       {e.curso || ""}
                       {e.data_evento ? ` · ${fmtDateBR(e.data_evento)}` : ""}
                     </p>
                   </button>
                   <div className="flex items-center gap-2">
-                    <div className="hidden h-1.5 w-20 rounded-full bg-slate-800 sm:block">
-                      <div className="h-1.5 rounded-full bg-indigo-600" style={{ width: `${pct}%` }} />
+                    <div className="hidden h-1.5 w-20 rounded-full bg-ink-800 sm:block">
+                      <div className="h-1.5 rounded-full bg-brand-600" style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="w-9 text-right text-xs text-slate-500">{pct}%</span>
+                    <span className="w-9 text-right text-xs text-ink-400">{pct}%</span>
                     <StatusBadge completo={e.status === "completo"} pct={pct} compact />
                     <button
                       onClick={() => handleRemover(e.id)}
                       title="Remover checklist"
                       aria-label="Remover checklist"
-                      className="text-slate-600 hover:text-red-400"
+                      className="text-ink-500 hover:text-red-400"
                     >
                       ✕
                     </button>

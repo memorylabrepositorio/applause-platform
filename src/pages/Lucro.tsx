@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import BackLink from "@/components/BackLink";
 import { loadLucroPorContrato } from "@/lib/lucro/fetch";
 import { EMPTY_FILTERS, applyFilters, fmtBRL, type LucroFilters, type LucroPorContrato } from "@/lib/lucro/engine";
 
@@ -37,39 +38,37 @@ export default function Lucro() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-950 text-slate-100">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-ink-900 text-ink-50">
         <p className="text-red-400">Não foi possível carregar os dados: {error}</p>
-        <Link to="/" className="text-indigo-400 hover:text-indigo-300">← Voltar</Link>
+        <Link to="/" className="text-brand-400 hover:text-brand-300">← Voltar</Link>
       </div>
     );
   }
 
   if (!rows) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
+      <div className="flex min-h-screen items-center justify-center bg-ink-900 text-ink-300">
         Carregando lucro por contrato…
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 text-slate-100 sm:p-8">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Lucro por Contrato</h1>
-          <p className="text-sm text-slate-500">Contrato de formatura + PDV − contas a pagar</p>
+          <h1 className="text-xl font-semibold">Lucro por Contrato</h1>
+          <p className="text-sm text-ink-400">Contrato de formatura + PDV − contas a pagar</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link to="/contas-pagar" className="text-sm text-slate-400 hover:text-slate-200">
+          <Link to="/contas-pagar" className="text-sm text-ink-300 hover:text-ink-50">
             ← Contas a pagar
           </Link>
-          <Link to="/" className="text-sm text-slate-400 hover:text-slate-200">
-            Painel principal
-          </Link>
+        <BackLink />
         </div>
       </header>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Receita formatura" value={fmtBRL(totais.receitaFormatura)} />
         <Kpi label="Receita PDV" value={fmtBRL(totais.receitaPDV)} />
         <Kpi label="Despesas" value={fmtBRL(totais.despesas)} tone="red" />
@@ -80,7 +79,7 @@ export default function Lucro() {
         <select
           value={sortKey}
           onChange={(e) => setSortKey(e.target.value as SortKey)}
-          className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+          className="rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
         >
           <option value="lucro">Ordenar por lucro</option>
           <option value="receitaFormatura">Ordenar por receita formatura</option>
@@ -91,41 +90,41 @@ export default function Lucro() {
           value={filters.search}
           onChange={(e) => setFilters({ search: e.target.value })}
           placeholder="Buscar instituição, curso, contrato…"
-          className="min-w-[240px] flex-1 rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm"
+          className="min-w-[240px] flex-1 rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
         />
-        <span className="text-xs text-slate-500">{filtradas.length} contrato(s)</span>
+        <span className="text-xs text-ink-400">{filtradas.length} contrato(s)</span>
       </div>
 
-      <div className="overflow-auto rounded-xl border border-slate-800 bg-slate-900">
+      <div className="overflow-auto rounded-lg border border-ink-800 bg-ink-850">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-800 text-xs text-slate-500">
+          <thead className="border-b border-ink-800 text-xs text-ink-400">
             <tr>
-              <th className="px-3 py-2">Instituição</th>
-              <th className="px-3 py-2">Curso</th>
-              <th className="px-3 py-2">Nº controle</th>
-              <th className="px-3 py-2">Receita formatura</th>
-              <th className="px-3 py-2">Receita PDV</th>
-              <th className="px-3 py-2">Despesas</th>
-              <th className="px-3 py-2">Lucro</th>
+              <th className="px-2.5 py-1.5">Instituição</th>
+              <th className="px-2.5 py-1.5">Curso</th>
+              <th className="px-2.5 py-1.5">Nº controle</th>
+              <th className="px-2.5 py-1.5">Receita formatura</th>
+              <th className="px-2.5 py-1.5">Receita PDV</th>
+              <th className="px-2.5 py-1.5">Despesas</th>
+              <th className="px-2.5 py-1.5">Lucro</th>
             </tr>
           </thead>
           <tbody>
             {!filtradas.length && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
+                <td colSpan={7} className="px-3 py-6 text-center text-ink-400">
                   Nenhum contrato com dados de receita ou despesa ainda.
                 </td>
               </tr>
             )}
             {filtradas.map((r) => (
-              <tr key={r.nroControle} className="border-b border-slate-800/60 hover:bg-slate-800/40">
-                <td className="px-3 py-2">{r.instituicao || "—"}</td>
-                <td className="px-3 py-2 text-slate-400">{r.curso || "—"}</td>
-                <td className="px-3 py-2 text-slate-400">{r.nroControle}</td>
-                <td className="px-3 py-2">{fmtBRL(r.receitaFormatura)}</td>
-                <td className="px-3 py-2">{fmtBRL(r.receitaPDV)}</td>
-                <td className="px-3 py-2 text-red-400">{fmtBRL(r.despesas)}</td>
-                <td className={`px-3 py-2 font-medium ${r.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              <tr key={r.nroControle} className="border-b border-ink-800/60 hover:bg-ink-800/40">
+                <td className="px-2.5 py-1.5">{r.instituicao || "—"}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{r.curso || "—"}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{r.nroControle}</td>
+                <td className="px-2.5 py-1.5">{fmtBRL(r.receitaFormatura)}</td>
+                <td className="px-2.5 py-1.5">{fmtBRL(r.receitaPDV)}</td>
+                <td className="px-2.5 py-1.5 text-red-400">{fmtBRL(r.despesas)}</td>
+                <td className={`px-2.5 py-1.5 font-medium ${r.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                   {fmtBRL(r.lucro)}
                 </td>
               </tr>
@@ -138,11 +137,11 @@ export default function Lucro() {
 }
 
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: "emerald" | "red" }) {
-  const toneClass = tone === "emerald" ? "text-emerald-400" : tone === "red" ? "text-red-400" : "text-slate-100";
+  const toneClass = tone === "emerald" ? "text-emerald-400" : tone === "red" ? "text-red-400" : "text-ink-50";
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className={`mt-1 text-xl font-semibold ${toneClass}`}>{value}</p>
+    <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
+      <p className="text-xs text-ink-400">{label}</p>
+      <p className={`mt-1 text-lg font-semibold ${toneClass}`}>{value}</p>
     </div>
   );
 }
