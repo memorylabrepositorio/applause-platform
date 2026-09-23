@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import BackLink from "@/components/BackLink";
+import Layout from "@/components/Layout";
 import { loadContratos, loadEventos, createChecklistFromContrato, updateChecklist, deleteChecklist } from "@/lib/checklist/fetch";
 import {
   ALL_FIELD_KEYS,
@@ -209,7 +209,7 @@ export default function Checklist() {
     const pct = progressOf({ ...currentEvento, ...formValues } as ChecklistEvento);
     const completo = pct === 100;
     return (
-      <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+      <Layout>
         <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <button onClick={closeForm} className="mb-2 text-sm text-ink-300 hover:text-ink-50">
@@ -282,13 +282,13 @@ export default function Checklist() {
             </div>
           ))}
         </div>
-      </div>
+      </Layout>
     );
   }
 
   // ---------- view: lista ----------
   return (
-    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+    <Layout>
       <header className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Checklist de Solenidade</h1>
@@ -305,7 +305,6 @@ export default function Checklist() {
           <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
             ↻ Atualizar
           </button>
-        <BackLink />
         </div>
       </header>
 
@@ -442,7 +441,7 @@ export default function Checklist() {
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 

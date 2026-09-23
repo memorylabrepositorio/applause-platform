@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import BackLink from "@/components/BackLink";
+import Layout from "@/components/Layout";
 import {
   atualizarParcela,
   criarParcela,
@@ -229,7 +229,7 @@ export default function Financeiro() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+    <Layout>
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Financeiro — Contas a Receber</h1>
@@ -252,7 +252,6 @@ export default function Financeiro() {
           >
             + Nova parcela
           </button>
-        <BackLink />
         </div>
       </header>
 
@@ -516,7 +515,7 @@ export default function Financeiro() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   );
 }
 

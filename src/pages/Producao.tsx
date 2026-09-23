@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import BackLink from "@/components/BackLink";
+import Layout from "@/components/Layout";
 import { atualizarItem, criarItem, excluirItem, loadProducaoData } from "@/lib/producao/fetch";
 import {
   EMPTY_FILTERS,
@@ -173,7 +173,7 @@ export default function Producao() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+    <Layout>
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Produção — Itens Vendidos</h1>
@@ -196,7 +196,6 @@ export default function Producao() {
           >
             + Novo item
           </button>
-        <BackLink />
         </div>
       </header>
 
@@ -419,7 +418,7 @@ export default function Producao() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   );
 }
 

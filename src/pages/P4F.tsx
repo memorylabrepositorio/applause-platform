@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bar, BarChart, Cell, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import BackLink from "@/components/BackLink";
+import Layout from "@/components/Layout";
 import { useTheme } from "@/contexts/ThemeContext";
 import { categoricalPalette, CHART_NEUTRALS } from "@/lib/chartPalette";
 import { loadVendasData } from "@/lib/vendas/fetch";
@@ -127,7 +127,7 @@ export default function P4F() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+    <Layout>
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">P4F / Sessão Estúdio</h1>
@@ -135,7 +135,6 @@ export default function P4F() {
             Sessão Estúdio em Porto Alegre/Caxias e atendidos em Novo Hamburgo
           </p>
         </div>
-        <BackLink />
       </header>
 
       <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -165,7 +164,7 @@ export default function P4F() {
             <XAxis dataKey="grupo" tick={{ fill: neutros.axis, fontSize: 11 }} axisLine={{ stroke: neutros.grid }} tickLine={false} />
             <YAxis tick={{ fill: neutros.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
             <Tooltip
-              cursor={{ fill: "rgba(4,100,176,0.08)" }}
+              cursor={false}
               contentStyle={{ background: neutros.tooltipBg, border: `1px solid ${neutros.grid}`, borderRadius: 10, fontSize: 12 }}
               labelStyle={{ color: neutros.tooltipText, fontWeight: 600 }}
               formatter={(value: number, name: string) =>
@@ -329,7 +328,7 @@ export default function P4F() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   );
 }
 

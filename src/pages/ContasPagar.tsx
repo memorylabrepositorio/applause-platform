@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import BackLink from "@/components/BackLink";
+import Layout from "@/components/Layout";
 import { atualizarConta, criarConta, excluirConta, loadContasPagar } from "@/lib/contaspagar/fetch";
 import {
   EMPTY_FILTERS,
@@ -169,7 +169,7 @@ export default function ContasPagar() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+    <Layout>
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Contas a Pagar — Orçamento</h1>
@@ -195,7 +195,6 @@ export default function ContasPagar() {
           <Link to="/lucro" className="text-sm text-ink-300 hover:text-ink-50">
             Lucro por contrato →
           </Link>
-        <BackLink />
         </div>
       </header>
 
@@ -406,7 +405,7 @@ export default function ContasPagar() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   );
 }
 

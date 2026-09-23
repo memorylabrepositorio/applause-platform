@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import BackLink from "@/components/BackLink";
+import Layout from "@/components/Layout";
 import {
   BarChart,
   Bar,
@@ -126,6 +126,25 @@ export default function Vendas() {
     );
   }, [filtered, alunosStatus, alunosFilter]);
 
+  // listas completas pros selects de filtro (não encolhem conforme os
+  // próprios filtros são aplicados — mesmo padrão do painel antigo)
+  const allSalesOnly = useMemo(
+    () => (rows ? rows.filter((r) => r.descricao !== "NAO COMPROU") : []),
+    [rows]
+  );
+  const allVendedores = useMemo(
+    () => computeVendedorStats(allSalesOnly).sort((a, b) => a.label.localeCompare(b.label)),
+    [allSalesOnly]
+  );
+  const allEstudios = useMemo(
+    () => estudioBreakdown(allSalesOnly).sort((a, b) => a.label.localeCompare(b.label)),
+    [allSalesOnly]
+  );
+  const MESES_OPT = [
+    ["01", "Jan"], ["02", "Fev"], ["03", "Mar"], ["04", "Abr"], ["05", "Mai"], ["06", "Jun"],
+    ["07", "Jul"], ["08", "Ago"], ["09", "Set"], ["10", "Out"], ["11", "Nov"], ["12", "Dez"],
+  ];
+
   const years = useMemo(() => {
     if (!rows) return [];
     const set = new Set<string>();
@@ -153,8 +172,10 @@ export default function Vendas() {
     );
   }
 
+  const hasActiveFilter = !!(filters.month || filters.estudio || filters.vendedor);
+
   return (
-    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+    <Layout>
       <header className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Painel de Vendas</h1>
@@ -162,46 +183,75 @@ export default function Vendas() {
             {fmtInt(salesOnly.length)} de {fmtInt(rows.filter((r) => r.descricao !== "NAO COMPROU").length)} vendas
           </p>
         </div>
-        <BackLink />
       </header>
 
       {/* filtros */}
-      <div className="mb-4 flex flex-wrap gap-3">
-        <select
-          value={filters.year || ""}
-          onChange={(e) => setFilters((f) => ({ ...f, year: e.target.value || undefined }))}
-          className="rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
-        >
-          <option value="">Todos os anos</option>
-          {years.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
-        {filters.vendedor && (
-          <button
-            onClick={() => setFilters((f) => ({ ...f, vendedor: undefined }))}
-            className="rounded-md border border-brand-700 bg-brand-950 px-2.5 py-1 text-sm text-brand-300"
+      <div className="mb-2 flex flex-wrap items-end gap-3">
+        <FilterField label="Ano">
+          <select
+            value={filters.year || ""}
+            onChange={(e) => setFilters((f) => ({ ...f, year: e.target.value || undefined }))}
+            className="rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
           >
-            Vendedor: {filters.vendedor} ✕
-          </button>
-        )}
-        {filters.estudio && (
-          <button
-            onClick={() => setFilters((f) => ({ ...f, estudio: undefined }))}
-            className="rounded-md border border-brand-700 bg-brand-950 px-2.5 py-1 text-sm text-brand-300"
+            <option value="">Todos</option>
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </FilterField>
+        <FilterField label="Mês">
+          <select
+            value={filters.month || ""}
+            onChange={(e) => setFilters((f) => ({ ...f, month: e.target.value || undefined }))}
+            className="rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
           >
-            Estúdio: {filters.estudio} ✕
-          </button>
-        )}
-        {filters.month && (
-          <button
-            onClick={() => setFilters((f) => ({ ...f, month: undefined }))}
-            className="rounded-md border border-brand-700 bg-brand-950 px-2.5 py-1 text-sm text-brand-300"
+            <option value="">Todos</option>
+            {MESES_OPT.map(([v, label]) => (
+              <option key={v} value={v}>{label}</option>
+            ))}
+          </select>
+        </FilterField>
+        <FilterField label="Estúdio">
+          <select
+            value={filters.estudio || ""}
+            onChange={(e) => setFilters((f) => ({ ...f, estudio: e.target.value || undefined }))}
+            className="max-w-[14rem] rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
           >
-            Mês: {monthly.find((m) => m.key.endsWith(`-${filters.month}`))?.label || filters.month} ✕
+            <option value="">Todos</option>
+            {allEstudios.map((e) => (
+              <option key={e.label} value={e.label.toUpperCase()}>{e.label}</option>
+            ))}
+          </select>
+        </FilterField>
+        <FilterField label="Vendedor">
+          <select
+            value={filters.vendedor || ""}
+            onChange={(e) => setFilters((f) => ({ ...f, vendedor: e.target.value || undefined }))}
+            className="max-w-[14rem] rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1 text-sm"
+          >
+            <option value="">Todos</option>
+            {allVendedores.map((v) => (
+              <option key={v.key} value={v.key}>{v.label}</option>
+            ))}
+          </select>
+        </FilterField>
+        {hasActiveFilter && (
+          <button
+            onClick={() => setFilters((f) => ({ year: f.year }))}
+            className="rounded-md border border-ink-600 px-2.5 py-1.5 text-sm text-ink-300 hover:border-brand-600 hover:text-brand-300"
+          >
+            Limpar filtros ✕
           </button>
         )}
       </div>
+      {hasActiveFilter && (
+        <p className="mb-4 text-xs text-ink-400">
+          Mostrando {fmtInt(salesOnly.length)} vendas
+          {filters.month ? ` · mês ${MESES_OPT.find(([v]) => v === filters.month)?.[1]}` : ""}
+          {filters.estudio ? ` · estúdio ${filters.estudio}` : ""}
+          {filters.vendedor ? ` · vendedor ${filters.vendedor}` : ""}
+        </p>
+      )}
 
       {/* KPIs */}
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -234,7 +284,7 @@ export default function Vendas() {
             <XAxis dataKey="label" stroke={neutros.axis} fontSize={12} />
             <YAxis stroke={neutros.axis} fontSize={12} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
             <Tooltip
-              cursor={{ fill: neutros.grid, opacity: 0.4 }}
+              cursor={false}
               formatter={(v: number) => fmtBRL(v)}
               contentStyle={{
                 background: neutros.tooltipBg,
@@ -348,16 +398,16 @@ export default function Vendas() {
           </Pill>
         </div>
         <div className="max-h-96 overflow-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[860px] text-sm">
             <thead className="sticky top-0 bg-ink-850">
               <tr className="border-b border-ink-800 text-left text-xs uppercase text-ink-400">
-                <th className="py-2">Data</th>
-                <th className="py-2">Aluno</th>
-                <th className="py-2">Instituição/Turma</th>
-                <th className="py-2">Produto</th>
-                <th className="py-2 text-right">Total</th>
-                <th className="py-2">Compra</th>
-                <th className="py-2">Agenda</th>
+                <th className="whitespace-nowrap py-2.5 pr-3">Data</th>
+                <th className="py-2.5 pr-3">Aluno</th>
+                <th className="py-2.5 pr-3">Instituição/Turma</th>
+                <th className="py-2.5 pr-3">Produto</th>
+                <th className="whitespace-nowrap py-2.5 pr-3 text-right">Total</th>
+                <th className="whitespace-nowrap py-2.5 pr-3">Compra</th>
+                <th className="whitespace-nowrap py-2.5">Agenda</th>
               </tr>
             </thead>
             <tbody>
@@ -367,15 +417,15 @@ export default function Vendas() {
                 const inst = institutionLabelOf(r);
                 return (
                   <tr key={i} className="border-b border-ink-800/50">
-                    <td className="py-2">{r.dataVenda || "—"}</td>
-                    <td className="py-2">{titleCase(r.cliente)}</td>
-                    <td className="py-2">{inst ? titleCase(inst) : "—"}</td>
-                    <td className="py-2">{titleCase(r.descricao)}</td>
-                    <td className="py-2 text-right">{fmtBRL(r.total)}</td>
-                    <td className="py-2">
+                    <td className="whitespace-nowrap py-2.5 pr-3">{r.dataVenda || "—"}</td>
+                    <td className="py-2.5 pr-3">{titleCase(r.cliente)}</td>
+                    <td className="py-2.5 pr-3">{inst ? titleCase(inst) : "—"}</td>
+                    <td className="py-2.5 pr-3">{titleCase(r.descricao)}</td>
+                    <td className="whitespace-nowrap py-2.5 pr-3 text-right">{fmtBRL(r.total)}</td>
+                    <td className="whitespace-nowrap py-2.5 pr-3">
                       <Badge good={comprou}>{comprou ? "Comprou" : "Não comprou"}</Badge>
                     </td>
-                    <td className="py-2">
+                    <td className="whitespace-nowrap py-2.5">
                       <Badge good={agendou}>{agendou ? "Agendado" : "Falta agendar"}</Badge>
                     </td>
                   </tr>
@@ -436,6 +486,15 @@ export default function Vendas() {
           </table>
         </div>
       </div>
+    </Layout>
+  );
+}
+
+function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs text-ink-400">{label}</label>
+      {children}
     </div>
   );
 }
@@ -511,7 +570,7 @@ function Pill({
 function Badge({ good, children }: { good: boolean; children: React.ReactNode }) {
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-xs ${
+      className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs ${
         good ? "bg-emerald-950 text-emerald-400" : "bg-amber-950 text-amber-400"
       }`}
     >

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import BackLink from "@/components/BackLink";
+import Layout from "@/components/Layout";
 import { loadAtendimentoData } from "@/lib/atendimento/fetch";
 import { fmtDateBR, type Aluno } from "@/lib/atendimento/engine";
 import {
@@ -183,7 +183,7 @@ export default function Sdr() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+    <Layout>
       <header className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">SDR (Agente de IA)</h1>
@@ -206,7 +206,6 @@ export default function Sdr() {
           <Link to="/configuracoes" className="text-sm text-ink-300 hover:text-ink-50">
             ⚙ Configurações
           </Link>
-        <BackLink />
         </div>
       </header>
 
@@ -450,7 +449,7 @@ export default function Sdr() {
           </div>
         </>
       )}
-    </div>
+    </Layout>
   );
 }
 

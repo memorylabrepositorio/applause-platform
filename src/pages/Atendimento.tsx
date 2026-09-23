@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import BackLink from "@/components/BackLink";
+import Layout from "@/components/Layout";
 import {
   concluirTarefa,
   criarNota,
@@ -219,7 +219,7 @@ export default function Atendimento() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+    <Layout>
       <header className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">CRM de Atendimento</h1>
@@ -236,7 +236,6 @@ export default function Atendimento() {
           <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
             ↻ Atualizar
           </button>
-        <BackLink />
         </div>
       </header>
 
@@ -628,7 +627,7 @@ export default function Atendimento() {
           </div>
         </>
       )}
-    </div>
+    </Layout>
   );
 }
 

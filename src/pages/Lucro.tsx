@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import BackLink from "@/components/BackLink";
+import Layout from "@/components/Layout";
 import { loadLucroPorContrato } from "@/lib/lucro/fetch";
 import { EMPTY_FILTERS, applyFilters, fmtBRL, type LucroFilters, type LucroPorContrato } from "@/lib/lucro/engine";
 
@@ -54,7 +54,7 @@ export default function Lucro() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+    <Layout>
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Lucro por Contrato</h1>
@@ -64,7 +64,6 @@ export default function Lucro() {
           <Link to="/contas-pagar" className="text-sm text-ink-300 hover:text-ink-50">
             ← Contas a pagar
           </Link>
-        <BackLink />
         </div>
       </header>
 
@@ -132,7 +131,7 @@ export default function Lucro() {
           </tbody>
         </table>
       </div>
-    </div>
+    </Layout>
   );
 }
 

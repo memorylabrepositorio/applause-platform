@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import BackLink from "@/components/BackLink";
+import Layout from "@/components/Layout";
 import { loadSdrConfig, saveSdrConfig } from "@/lib/sdr/fetch";
 import type { SdrCanal, SdrConfig } from "@/lib/sdr/engine";
 import { getSecretsStatus, saveSecret, type SecretsStatus } from "@/lib/settings/fetch";
@@ -54,7 +54,7 @@ export default function Configuracoes() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-900 p-3 text-ink-50 sm:p-6">
+    <Layout>
       <header className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Configurações</h1>
@@ -64,7 +64,6 @@ export default function Configuracoes() {
           <Link to="/sdr" className="text-sm text-ink-300 hover:text-ink-50">
             ← Voltar pro SDR
           </Link>
-          <BackLink />
         </div>
       </header>
 
@@ -168,7 +167,7 @@ export default function Configuracoes() {
           onSaved={refresh}
         />
       </IntegracaoCard>
-    </div>
+    </Layout>
   );
 }
 
