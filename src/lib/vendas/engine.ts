@@ -81,7 +81,7 @@ export function isUnmatchedRow(r: VendaRow): boolean {
 
 // "Sessão Estúdio" é uma tag que mora no campo Nº Controle (não em Curso) —
 // marca venda avulsa de estúdio em vez de venda via instituição/turma
-function isSessaoEstudio(r: VendaRow): boolean {
+export function isSessaoEstudio(r: VendaRow): boolean {
   const c = norm(r.nroControle);
   return c === "SESSÃO ESTÚDIO" || c === "SESSAO ESTUDIO";
 }

@@ -6,6 +6,11 @@ const MODULES = [
   { to: "/checklist", label: "Checklist de Solenidade", ready: true },
   { to: "/atendimento", label: "CRM de Atendimento", ready: true },
   { to: "/sdr", label: "SDR (Agente de IA)", ready: true },
+  { to: "/financeiro", label: "Financeiro (Contas a Receber)", ready: true },
+  { to: "/producao", label: "Produção (Itens Vendidos)", ready: true },
+  { to: "/p4f", label: "P4F / Sessão Estúdio", ready: true },
+  { to: "/contas-pagar", label: "Contas a Pagar", ready: true },
+  { to: "/lucro", label: "Lucro por Contrato", ready: true },
 ];
 
 export default function Dashboard() {

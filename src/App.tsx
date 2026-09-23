@@ -7,6 +7,11 @@ import Vendas from "@/pages/Vendas";
 import Checklist from "@/pages/Checklist";
 import Atendimento from "@/pages/Atendimento";
 import Sdr from "@/pages/Sdr";
+import Financeiro from "@/pages/Financeiro";
+import Producao from "@/pages/Producao";
+import P4F from "@/pages/P4F";
+import ContasPagar from "@/pages/ContasPagar";
+import Lucro from "@/pages/Lucro";
 import Configuracoes from "@/pages/Configuracoes";
 import ModulePlaceholder from "@/pages/ModulePlaceholder";
 
@@ -53,6 +58,46 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Sdr />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/financeiro"
+            element={
+              <ProtectedRoute>
+                <Financeiro />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/producao"
+            element={
+              <ProtectedRoute>
+                <Producao />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/p4f"
+            element={
+              <ProtectedRoute>
+                <P4F />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contas-pagar"
+            element={
+              <ProtectedRoute>
+                <ContasPagar />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/lucro"
+            element={
+              <ProtectedRoute>
+                <Lucro />
               </ProtectedRoute>
             }
           />

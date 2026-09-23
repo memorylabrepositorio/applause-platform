@@ -33,7 +33,18 @@ npm run dev
 - [x] Checklist de Solenidade
 - [x] CRM de Atendimento
 - [x] SDR (agente de IA) — Parte A: lembretes automáticos por WhatsApp
+- [x] Financeiro (contas a receber — parcelas, cobrança, status de pagamento)
+- [x] Produção (status dos itens vendidos, ligando com a planilha da Dani)
+- [x] P4F / Sessão Estúdio (view sobre vendas+agenda, sem tabela nova)
+- [x] Contas a Pagar (orçamento por contrato/instituição)
+- [x] Lucro por Contrato (formatura + PDV − contas a pagar)
 - [ ] SDR — Parte B: IA conversando de fato com o aluno
+- [ ] Import de planilhas (Dani, Nathia, orçamento do Pedro) e automação Pronet
 - [ ] Passe de estética geral (design system, tema, etc.)
+
+O bloco Financeiro/Produção/Contas a Pagar (migration `0005`) já nasce
+pensado pra, com o tempo, **substituir o Pronet e o SGE**: cada tabela tem
+uma coluna `origem` (`manual` | `pronet`) pra não misturar lançamento manual
+com importação futura.
 
 Cada módulo entra como uma caixa nova, sem mexer nas outras.
