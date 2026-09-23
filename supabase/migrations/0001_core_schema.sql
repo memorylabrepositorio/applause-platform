@@ -5,8 +5,8 @@
 -- a ser a única fonte de verdade sobre "quem é quem": organizações, membros
 -- e papéis. Cada módulo futuro (vendas, checklist, atendimento, SDR, álbuns,
 -- etc.) referencia `core.organizations` por `org_id`, em vez de reinventar
--- login/permissão — o mesmo padrão usado no projeto arkom-sdr (schema `core`
--- + schemas por solução).
+-- login/permissão, com um schema central (`core`) compartilhado por todos os
+-- módulos.
 --
 -- Esta migration é ADITIVA: não altera nem apaga nada das tabelas existentes
 -- (vendas, contratos, clientes, agenda, checklist_eventos, atendimento_*).

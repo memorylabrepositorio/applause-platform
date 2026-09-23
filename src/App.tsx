@@ -6,6 +6,8 @@ import Dashboard from "@/pages/Dashboard";
 import Vendas from "@/pages/Vendas";
 import Checklist from "@/pages/Checklist";
 import Atendimento from "@/pages/Atendimento";
+import Sdr from "@/pages/Sdr";
+import Configuracoes from "@/pages/Configuracoes";
 import ModulePlaceholder from "@/pages/ModulePlaceholder";
 
 export default function App() {
@@ -50,7 +52,15 @@ export default function App() {
             path="/sdr"
             element={
               <ProtectedRoute>
-                <ModulePlaceholder title="SDR (Agente de IA)" />
+                <Sdr />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/configuracoes"
+            element={
+              <ProtectedRoute>
+                <Configuracoes />
               </ProtectedRoute>
             }
           />

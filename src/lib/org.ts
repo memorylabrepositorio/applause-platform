@@ -3,8 +3,8 @@ import { supabase } from "./supabase";
 /**
  * Resolução de organização (tenant) do usuário logado.
  *
- * Adaptado do padrão core/org.ts do projeto arkom-sdr, simplificado: aqui
- * tudo vive num único projeto Supabase (não é "1 deploy = 1 org"), então a
+ * Padrão simplificado de resolução de tenant: aqui tudo vive num único
+ * projeto Supabase (não é "1 deploy = 1 org"), então a
  * resolução é direta — lê `core.memberships` e pega a primeira org do
  * usuário. Quando o sistema precisar de troca de organização (um usuário em
  * mais de uma), isso vira um seletor em vez de "a primeira que achar".
