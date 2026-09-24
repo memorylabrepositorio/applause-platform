@@ -119,7 +119,11 @@
 .mapa-cerebro { color: rgb(var(--m-texto)); animation: mapa-gira 180s linear infinite; transform-origin: 0 0; }
 @keyframes mapa-gira { to { transform: rotate(360deg); } }
 .mapa-cerebro-aresta { fill: none; stroke: currentColor; stroke-width: 1; }
-.mapa-nucleo { fill: rgb(var(--brand-400)); filter: drop-shadow(0 0 6px rgb(var(--brand-400))); }
+.mapa-nucleo { fill: rgb(var(--brand-400)); filter: drop-shadow(0 0 6px rgb(var(--brand-400))); transition: filter 0.25s ease; }
+.mapa-nucleo-grupo { transition: transform 0.25s ease; cursor: pointer; }
+.mapa-nucleo-grupo.hover { transform: scale(1.6); }
+.mapa-nucleo-grupo.hover .mapa-nucleo { filter: drop-shadow(0 0 16px rgb(var(--brand-400))); }
+.mapa-nucleo-alvo { pointer-events: all; }
 .mapa-aresta { fill: none; stroke-width: 2.2; stroke-opacity: 0.55; }
 .mapa-aresta.tracejada { stroke-dasharray: 4 5; stroke-opacity: 0.4; }
 
@@ -150,7 +154,11 @@
   transition: box-shadow 0.3s, transform 0.2s;
 }
 .mapa-badge svg { width: 46px; height: 46px; }
-.mapa-badge:hover { transform: translate(-50%, -50%) scale(1.06); }
+.mapa-badge:hover,
+.mapa-dept.hover .mapa-badge {
+  transform: translate(-50%, -50%) scale(1.14);
+  box-shadow: 0 0 70px color-mix(in srgb, var(--c) 75%, transparent);
+}
 .mapa-dept.foco .mapa-badge { box-shadow: 0 0 70px color-mix(in srgb, var(--c) 70%, transparent); }
 .mapa-dept.foco .mapa-rotulo { display: none; }
 
@@ -193,7 +201,7 @@
 @media (max-width: 767px) { .mapa-borda { display: none; } }
 
 .mapa-foco {
-  position: absolute; left: 0; right: 0; bottom: 8.5%; z-index: 20;
+  position: absolute; left: 0; right: 0; bottom: 3%; z-index: 20;
   display: flex; justify-content: center; align-items: center; pointer-events: none;
 }
 .mapa-foco .nome {

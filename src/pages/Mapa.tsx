@@ -34,6 +34,7 @@ export default function Mapa() {
   // ao passar o mouse num departamento, os outros escurecem — só ele (ramos,
   // rótulo, anéis) fica em destaque, tipo um "spotlight"
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [hoverNucleo, setHoverNucleo] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
   // escala "Ajustar": cabe o mapa inteiro na área visível
@@ -184,8 +185,23 @@ export default function Mapa() {
                 {mapa.nucleo.pontos.map((p, i) => (
                   <circle key={i} cx={p.pos[0]} cy={p.pos[1]} r={p.r} fill={p.cor ?? "currentColor"} opacity={p.opacidade} />
                 ))}
-                <circle className="mapa-nucleo" cx={mapa.nucleo.nucleo[0]} cy={mapa.nucleo.nucleo[1]} r={5.85} />
-                <circle cx={mapa.nucleo.satelite[0]} cy={mapa.nucleo.satelite[1]} r={4.4} fill="currentColor" />
+                <g
+                  className={`mapa-nucleo-grupo${hoverNucleo ? " hover" : ""}`}
+                  style={{ transformOrigin: `${mapa.nucleo.nucleo[0]}px ${mapa.nucleo.nucleo[1]}px` } as CSSProperties}
+                  onMouseEnter={() => setHoverNucleo(true)}
+                  onMouseLeave={() => setHoverNucleo(false)}
+                >
+                  <circle className="mapa-nucleo" cx={mapa.nucleo.nucleo[0]} cy={mapa.nucleo.nucleo[1]} r={5.85} />
+                  <circle cx={mapa.nucleo.satelite[0]} cy={mapa.nucleo.satelite[1]} r={4.4} fill="currentColor" />
+                  {/* área de toque maior — o ponto visível é pequeno demais pra passar o mouse com precisão */}
+                  <circle
+                    cx={mapa.nucleo.nucleo[0]}
+                    cy={mapa.nucleo.nucleo[1]}
+                    r={34}
+                    fill="transparent"
+                    className="mapa-nucleo-alvo"
+                  />
+                </g>
               </g>
 
               {depts.map((x) => (
