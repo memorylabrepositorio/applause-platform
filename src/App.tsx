@@ -8,6 +8,7 @@ import Login from "@/pages/Login";
 // cada painel vira seu próprio pedaço de JS, carregado só quando o usuário
 // entra nele — em vez de um bundle único de ~1.4MB no primeiro acesso
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Mapa = lazy(() => import("@/pages/Mapa"));
 const Vendas = lazy(() => import("@/pages/Vendas"));
 const Checklist = lazy(() => import("@/pages/Checklist"));
 const Atendimento = lazy(() => import("@/pages/Atendimento"));
@@ -31,7 +32,7 @@ function PageFallback() {
 function Home() {
   const { defaultRoute } = useTheme();
   if (defaultRoute && defaultRoute !== "/") return <Navigate to={defaultRoute} replace />;
-  return <Dashboard />;
+  return <Mapa />;
 }
 
 export default function App() {
@@ -47,6 +48,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mapa"
+            element={
+              <ProtectedRoute>
+                <Mapa />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/modulos"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
               </ProtectedRoute>
             }
           />

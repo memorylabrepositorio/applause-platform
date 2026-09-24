@@ -38,6 +38,7 @@ npm run dev
 - [x] P4F / Sessão Estúdio (view sobre vendas+agenda, sem tabela nova)
 - [x] Contas a Pagar (orçamento por contrato/instituição)
 - [x] Lucro por Contrato (formatura + PDV − contas a pagar)
+- [x] Mapa (página inicial) — constelação dos departamentos e funções, com links pros módulos (`src/lib/mapa/data.ts`)
 - [ ] SDR — Parte B: IA conversando de fato com o aluno
 - [ ] Import de planilhas (Dani, Nathia, orçamento do Pedro) e automação Pronet
 - [ ] Passe de estética geral (design system, tema, etc.)

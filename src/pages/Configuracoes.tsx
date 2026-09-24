@@ -211,7 +211,8 @@ function AparenciaTab() {
           onChange={(e) => setDefaultRoute(e.target.value)}
           className="w-full max-w-sm rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1.5 text-sm"
         >
-          <option value="/">Visão geral (Dashboard)</option>
+          <option value="/">Mapa (padrão)</option>
+          <option value="/modulos">Visão geral (cards dos módulos)</option>
           {NAV_ITEMS.map((n) => (
             <option key={n.to} value={n.to}>
               {n.label}
@@ -224,7 +225,7 @@ function AparenciaTab() {
         onClick={() => navigate("/")}
         className="text-sm text-ink-400 transition hover:text-ink-100"
       >
-        ← Voltar pra visão geral
+        ← Voltar pra página inicial
       </button>
     </div>
   );

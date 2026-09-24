@@ -16,12 +16,18 @@ import {
   Power,
   Menu,
   Settings,
+  Orbit,
+  LayoutGrid,
+  type LucideIcon,
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import AppearanceMenu from "@/components/AppearanceMenu";
 import { useAuth } from "@/contexts/AuthContext";
+import marca from "@/assets/marca-branca.png";
 
-const MODULES = [
+const MODULES: { to: string; label: string; icon: LucideIcon }[] = [
+  { to: "/mapa", label: "Mapa", icon: Orbit },
+  { to: "/modulos", label: "Visão geral", icon: LayoutGrid },
   { to: "/vendas", label: "Vendas", icon: Wallet },
   { to: "/checklist", label: "Checklist", icon: ClipboardList },
   { to: "/atendimento", label: "Atendimento", icon: Handshake },
@@ -88,33 +94,37 @@ export default function Sidebar() {
             to={m.to}
             title={!expanded ? m.label : undefined}
             onClick={() => setMobileOpen(false)}
-            className={({ isActive }) =>
-              `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 ${
+            className={({ isActive: ativo }) => {
+              const isActive = ativo || (m.to === "/mapa" && pathname === "/");
+              return `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 ${
                 isActive
                   ? "bg-gradient-to-r from-brand-600/25 to-brand-600/5 text-brand-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
                   : "text-ink-300 hover:bg-ink-50/[0.06] hover:text-ink-50"
-              }`
-            }
+              }`;
+            }}
           >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-brand-500 shadow-[0_0_8px] shadow-brand-500/70" />
-                )}
-                <Icon
-                  size={18}
-                  strokeWidth={1.75}
-                  className={`shrink-0 transition-transform duration-150 ${isActive ? "text-brand-400" : "text-ink-400 group-hover:text-ink-100"} group-hover:scale-110`}
-                />
-                <span
-                  className={`truncate transition-all duration-150 ${
-                    expanded ? "opacity-100" : "lg:w-0 lg:opacity-0"
-                  }`}
-                >
-                  {m.label}
-                </span>
-              </>
-            )}
+            {({ isActive: ativo }) => {
+              const isActive = ativo || (m.to === "/mapa" && pathname === "/");
+              return (
+                <>
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-brand-500 shadow-[0_0_8px] shadow-brand-500/70" />
+                  )}
+                  <Icon
+                    size={18}
+                    strokeWidth={1.75}
+                    className={`shrink-0 transition-transform duration-150 ${isActive ? "text-brand-400" : "text-ink-400 group-hover:text-ink-100"} group-hover:scale-110`}
+                  />
+                  <span
+                    className={`truncate transition-all duration-150 ${
+                      expanded ? "opacity-100" : "lg:w-0 lg:opacity-0"
+                    }`}
+                  >
+                    {m.label}
+                  </span>
+                </>
+              );
+            }}
           </NavLink>
         );
       })}
@@ -159,8 +169,8 @@ export default function Sidebar() {
       >
         <div className="flex items-center gap-2 border-b border-white/[0.06] px-3.5 py-5">
           <NavLink to="/" className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white shadow-lg shadow-brand-950/60">
-              M
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 p-1.5 shadow-lg shadow-brand-950/60">
+              <img src={marca} alt="MemoryLab" className="h-full w-full object-contain" />
             </span>
             <AnimatePresence>
               {expanded && (
