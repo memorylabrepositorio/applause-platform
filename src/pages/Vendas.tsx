@@ -192,18 +192,28 @@ export default function Vendas() {
   const monthDetails = useMemo(() => {
     const map: Record<
       string,
-      { revenue: number; items: number; vendedores: Record<string, number>; produtos: Record<string, number> }
+      {
+        revenue: number;
+        items: number;
+        matched: number;
+        vendedores: Record<string, number>;
+        produtos: Record<string, number>;
+        estudios: Record<string, number>;
+      }
     > = {};
     salesForTrend.forEach((r) => {
       const mk = monthKey(r.dataVenda);
       if (!mk) return;
-      if (!map[mk]) map[mk] = { revenue: 0, items: 0, vendedores: {}, produtos: {} };
+      if (!map[mk]) map[mk] = { revenue: 0, items: 0, matched: 0, vendedores: {}, produtos: {}, estudios: {} };
       map[mk].revenue += r.total;
       map[mk].items += 1;
+      if (!isUnmatchedRow(r)) map[mk].matched += 1;
       const vk = vendedorLabel(r);
       map[mk].vendedores[vk] = (map[mk].vendedores[vk] || 0) + r.total;
       const pk = r.descricao?.trim() ? titleCase(r.descricao) : "Não informado";
       map[mk].produtos[pk] = (map[mk].produtos[pk] || 0) + r.total;
+      const ek = r.estudio?.trim() ? titleCase(r.estudio) : "Não identificado";
+      map[mk].estudios[ek] = (map[mk].estudios[ek] || 0) + r.total;
     });
     return map;
   }, [salesForTrend]);
@@ -211,14 +221,35 @@ export default function Vendas() {
   const selectedMonthDetail = useMemo(() => {
     if (!monthPopover) return null;
     const d = monthDetails[monthPopover.key];
-    const label = monthly.find((m) => m.key === monthPopover.key)?.label || monthPopover.key;
-    if (!d) return { label, revenue: 0, items: 0, topVendedores: [] as [string, number][], topProdutos: [] as [string, number][] };
+    const idx = monthly.findIndex((m) => m.key === monthPopover.key);
+    const label = monthly[idx]?.label || monthPopover.key;
+    const prev = idx > 0 ? monthly[idx - 1] : null;
+    if (!d) {
+      return {
+        label,
+        revenue: 0,
+        items: 0,
+        ticket: 0,
+        conv: 0,
+        vsAnteriorPct: null as number | null,
+        prevLabel: prev?.label,
+        topVendedores: [] as [string, number][],
+        topProdutos: [] as [string, number][],
+        topEstudios: [] as [string, number][],
+      };
+    }
+    const vsAnteriorPct = prev && prev.revenue ? ((d.revenue - prev.revenue) / prev.revenue) * 100 : null;
     return {
       label,
       revenue: d.revenue,
       items: d.items,
+      ticket: d.items ? d.revenue / d.items : 0,
+      conv: d.items ? (d.matched / d.items) * 100 : 0,
+      vsAnteriorPct,
+      prevLabel: prev?.label,
       topVendedores: Object.entries(d.vendedores).sort((a, b) => b[1] - a[1]).slice(0, 5),
       topProdutos: Object.entries(d.produtos).sort((a, b) => b[1] - a[1]).slice(0, 5),
+      topEstudios: Object.entries(d.estudios).sort((a, b) => b[1] - a[1]).slice(0, 5),
     };
   }, [monthPopover, monthDetails, monthly]);
 
@@ -807,9 +838,19 @@ export default function Vendas() {
 
       {/* faturamento mensal */}
       <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium text-ink-100">Faturamento por mês</p>
-          <p className="text-xs text-ink-400">Clique numa barra pra filtrar e ver o detalhamento</p>
+          <div className="flex items-center gap-2">
+            {filters.month && (
+              <button
+                onClick={() => setFilters((f) => ({ ...f, month: undefined }))}
+                className="rounded-full border border-ink-600 px-2 py-0.5 text-xs text-ink-300 transition hover:border-brand-600 hover:text-brand-300"
+              >
+                Limpar filtro de mês ✕
+              </button>
+            )}
+            <p className="text-xs text-ink-400">Clique numa barra pra filtrar e ver o detalhamento</p>
+          </div>
         </div>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={monthly}>
@@ -828,16 +869,28 @@ export default function Vendas() {
             <YAxis stroke={neutros.axis} fontSize={12} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
             <Tooltip
               cursor={false}
-              labelFormatter={(label: string) => `Mês de ${label}`}
-              formatter={(v: number) => [fmtBRL(v), "Faturamento"]}
-              labelStyle={{ color: neutros.tooltipText, fontWeight: 600, marginBottom: 4 }}
-              itemStyle={{ color: neutros.tooltipText }}
-              contentStyle={{
-                background: neutros.tooltipBg,
-                border: `1px solid ${neutros.grid}`,
-                borderRadius: 8,
-                color: neutros.tooltipText,
-                padding: "8px 12px",
+              content={({ active, payload }) => {
+                if (!active || !payload || !payload.length) return null;
+                const p = payload[0].payload as { label: string; revenue: number; items: number };
+                const ticket = p.items ? p.revenue / p.items : 0;
+                return (
+                  <div
+                    style={{
+                      background: neutros.tooltipBg,
+                      border: `1px solid ${neutros.grid}`,
+                      borderRadius: 8,
+                      color: neutros.tooltipText,
+                      padding: "8px 12px",
+                      fontSize: 12,
+                      minWidth: 150,
+                    }}
+                  >
+                    <p style={{ margin: 0, marginBottom: 4, fontWeight: 600 }}>Mês de {p.label}</p>
+                    <p style={{ margin: 0 }}>Faturamento: {fmtBRL(p.revenue)}</p>
+                    <p style={{ margin: 0, opacity: 0.8 }}>Itens vendidos: {fmtInt(p.items)}</p>
+                    <p style={{ margin: 0, opacity: 0.8 }}>Ticket médio: {fmtBRL(ticket)}</p>
+                  </div>
+                );
               }}
             />
             <Bar
@@ -868,7 +921,17 @@ export default function Vendas() {
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* ranking vendedores */}
         <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
-          <p className="mb-3 text-sm font-medium text-ink-100">Vendas por vendedor</p>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-sm font-medium text-ink-100">Vendas por vendedor</p>
+            {filters.vendedor && (
+              <button
+                onClick={() => setFilters((f) => ({ ...f, vendedor: undefined }))}
+                className="rounded-full border border-ink-600 px-2 py-0.5 text-xs text-ink-300 transition hover:border-brand-600 hover:text-brand-300"
+              >
+                Limpar filtro ✕
+              </button>
+            )}
+          </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-ink-800 text-left text-xs uppercase text-ink-400">
@@ -882,8 +945,10 @@ export default function Vendas() {
               {vendedores.map((v) => (
                 <tr
                   key={v.key}
-                  onClick={() => setFilters((f) => ({ ...f, vendedor: v.key }))}
-                  className="cursor-pointer border-b border-ink-800/50 hover:bg-ink-800/50"
+                  onClick={() => setFilters((f) => ({ ...f, vendedor: f.vendedor === v.key ? undefined : v.key }))}
+                  className={`cursor-pointer border-b border-ink-800/50 hover:bg-ink-800/50 ${
+                    filters.vendedor === v.key ? "bg-brand-950/40" : ""
+                  }`}
                 >
                   <td className="py-2">{v.label}</td>
                   <td className="py-2 text-right">{fmtBRL(v.revenue)}</td>
@@ -906,7 +971,11 @@ export default function Vendas() {
         <BarListCard
           title="Faturamento por estúdio"
           items={estudios}
-          onClick={(label) => setFilters((f) => ({ ...f, estudio: label.toUpperCase() }))}
+          activeLabel={filters.estudio}
+          onClick={(label) =>
+            setFilters((f) => ({ ...f, estudio: f.estudio === label.toUpperCase() ? undefined : label.toUpperCase() }))
+          }
+          onClear={() => setFilters((f) => ({ ...f, estudio: undefined }))}
         />
       </div>
 
@@ -1104,14 +1173,33 @@ export default function Vendas() {
       )}
 
       {selectedMonthDetail && monthPopover && (
-        <DetailPopover anchor={monthPopover} title={`Detalhamento — ${selectedMonthDetail.label}`} onClose={() => setMonthPopover(null)}>
-          <div className="mb-3 grid grid-cols-2 gap-2">
+        <DetailPopover
+          anchor={monthPopover}
+          title={`Detalhamento — ${selectedMonthDetail.label}`}
+          onClose={() => setMonthPopover(null)}
+          onClearFilter={filters.month ? () => setFilters((f) => ({ ...f, month: undefined })) : undefined}
+        >
+          <div className="mb-2 grid grid-cols-2 gap-2">
             <MiniStat label="Faturamento" value={fmtBRL(selectedMonthDetail.revenue)} />
             <MiniStat label="Itens vendidos" value={fmtInt(selectedMonthDetail.items)} />
+            <MiniStat label="Ticket médio" value={fmtBRL(selectedMonthDetail.ticket)} />
+            <MiniStat label="Cruzamento c/ agenda" value={fmtPct(selectedMonthDetail.conv)} />
           </div>
+          {selectedMonthDetail.vsAnteriorPct !== null && (
+            <p
+              className={`mb-3 flex items-center gap-1 text-xs ${
+                selectedMonthDetail.vsAnteriorPct >= 0 ? "text-emerald-400" : "text-amber-400"
+              }`}
+            >
+              {selectedMonthDetail.vsAnteriorPct >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+              {selectedMonthDetail.vsAnteriorPct >= 0 ? "+" : ""}
+              {selectedMonthDetail.vsAnteriorPct.toFixed(1)}% vs. {selectedMonthDetail.prevLabel}
+            </p>
+          )}
           <div className="space-y-3">
             <TopList title="Top vendedores" entries={selectedMonthDetail.topVendedores} />
             <TopList title="Top produtos" entries={selectedMonthDetail.topProdutos} />
+            <TopList title="Top estúdios" entries={selectedMonthDetail.topEstudios} />
           </div>
         </DetailPopover>
       )}
@@ -1181,23 +1269,38 @@ function BarListCard({
   title,
   items,
   onClick,
+  activeLabel,
+  onClear,
 }: {
   title: string;
   items: { label: string; value: number }[];
   onClick?: (label: string) => void;
+  activeLabel?: string;
+  onClear?: () => void;
 }) {
   const max = items[0]?.value || 1;
   return (
     <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
-      <p className="mb-3 text-sm font-medium text-ink-100">{title}</p>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-sm font-medium text-ink-100">{title}</p>
+        {activeLabel && onClear && (
+          <button
+            onClick={onClear}
+            className="rounded-full border border-ink-600 px-2 py-0.5 text-xs text-ink-300 transition hover:border-brand-600 hover:text-brand-300"
+          >
+            Limpar filtro ✕
+          </button>
+        )}
+      </div>
       <div className="space-y-2">
         {items.map((e) => {
           const Comp = onClick ? "button" : "div";
+          const active = !!activeLabel && e.label.toUpperCase() === activeLabel.toUpperCase();
           return (
             <Comp
               key={e.label}
               onClick={onClick ? () => onClick(e.label) : undefined}
-              className="block w-full text-left"
+              className={`block w-full rounded-md text-left ${active ? "ring-1 ring-brand-600/70" : ""}`}
             >
               <div className="mb-1 flex justify-between text-xs text-ink-300">
                 <span>{e.label}</span>
@@ -1256,11 +1359,15 @@ function DetailPopover({
   anchor,
   title,
   onClose,
+  onClearFilter,
   children,
 }: {
   anchor: { x: number; y: number };
   title: string;
   onClose: () => void;
+  /** quando o elemento clicado também aplicou um filtro global, mostra um
+      botão extra pra limpar esse filtro (além de só fechar o popover) */
+  onClearFilter?: () => void;
   children: React.ReactNode;
 }) {
   const WIDTH = 340;
@@ -1295,6 +1402,24 @@ function DetailPopover({
           </button>
         </div>
         {children}
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2.5">
+          {onClearFilter ? (
+            <button
+              onClick={() => {
+                onClearFilter();
+                onClose();
+              }}
+              className="text-xs text-amber-400 transition hover:text-amber-300"
+            >
+              Limpar filtro ✕
+            </button>
+          ) : (
+            <span />
+          )}
+          <button onClick={onClose} className="text-xs text-ink-400 transition hover:text-ink-100">
+            ← Fechar
+          </button>
+        </div>
       </div>
     </>
   );
