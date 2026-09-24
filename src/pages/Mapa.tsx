@@ -31,6 +31,9 @@ export default function Mapa() {
   const [busca, setBusca] = useState("");
   const [dica, setDica] = useState<Dica | null>(null);
   const [telaCheia, setTelaCheia] = useState(false);
+  // ao passar o mouse num departamento, os outros escurecem — só ele (ramos,
+  // rótulo, anéis) fica em destaque, tipo um "spotlight"
+  const [hoverId, setHoverId] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
   // escala "Ajustar": cabe o mapa inteiro na área visível
@@ -100,8 +103,6 @@ export default function Mapa() {
   }
 
   const escala = ajuste * zoom;
-  const contagem = foco ? foco.ramos.flat() : [];
-  const emProducao = contagem.filter((f) => f.status === "ok").length;
 
   return (
     <Layout>
@@ -151,12 +152,12 @@ export default function Mapa() {
             className={`mapa-palco${termo ? " buscando" : ""}`}
             style={{ transform: `translate(0px, 30px) scale(${escala})` }}
           >
-            <svg className="mapa-svg" width={3200} height={3200} viewBox="-1600 -1600 3200 3200" aria-hidden="true">
+            <svg className={`mapa-svg${hoverId ? " apagando" : ""}`} width={3200} height={3200} viewBox="-1600 -1600 3200 3200" aria-hidden="true">
               <circle r={168} className="mapa-anel" strokeDasharray="2 9" />
               <circle r={236} className="mapa-anel" strokeDasharray="1 6" />
 
               {depts.map((x) => (
-                <g key={x.dept.id}>
+                <g key={x.dept.id} className={`mapa-svg-dept${hoverId && hoverId !== x.dept.id ? " apagado" : ""}`}>
                   <path d={d(x.raio)} className="mapa-raio" />
                   {x.juncoes.map((j, k) => (
                     <circle key={k} cx={j[0]} cy={j[1]} r={1.8} className="mapa-juncao" />
@@ -188,7 +189,11 @@ export default function Mapa() {
               </g>
 
               {depts.map((x) => (
-                <g key={x.dept.id} stroke={x.dept.cor}>
+                <g
+                  key={x.dept.id}
+                  stroke={x.dept.cor}
+                  className={`mapa-svg-dept${hoverId && hoverId !== x.dept.id ? " apagado" : ""}`}
+                >
                   {x.ramos.map((r, k) => (
                     <g key={k}>
                       <path d={d(r.stub)} className="mapa-aresta tracejada" />
@@ -202,7 +207,7 @@ export default function Mapa() {
               ))}
             </svg>
 
-            <div className="mapa-nucleo-nome">
+            <div className={`mapa-nucleo-nome${hoverId ? " apagado" : ""}`}>
               {MAPA_NUCLEO.nome}
               <small>{MAPA_NUCLEO.sub}</small>
             </div>
@@ -210,11 +215,16 @@ export default function Mapa() {
             {depts.map((x) => {
               const Icon = x.dept.icon;
               const emFoco = x.dept.id === focoId;
+              const emHover = x.dept.id === hoverId;
               return (
                 <div
                   key={x.dept.id}
-                  className={`mapa-dept${emFoco ? " foco" : ""}`}
+                  className={`mapa-dept${emFoco ? " foco" : ""}${emHover ? " hover" : ""}${
+                    hoverId && !emHover ? " apagado" : ""
+                  }`}
                   style={{ "--c": x.dept.cor } as CSSProperties}
+                  onMouseEnter={() => setHoverId(x.dept.id)}
+                  onMouseLeave={() => setHoverId(null)}
                 >
                   <button
                     type="button"
@@ -287,9 +297,6 @@ export default function Mapa() {
               title={foco.to ? `Abrir ${foco.nome}` : undefined}
             >
               {foco.nome}
-              <span>
-                {emProducao} em produção · {contagem.length - emProducao} em desenvolvimento
-              </span>
             </button>
             <button type="button" className="seta" style={{ right: "calc(50% - 215px)" }} onClick={() => irPara(1)} aria-label="Próximo departamento">
               <ChevronRight size={22} strokeWidth={1.5} />

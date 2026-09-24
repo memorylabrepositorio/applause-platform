@@ -107,6 +107,10 @@
   transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .mapa-svg { position: absolute; left: -1600px; top: -1600px; overflow: visible; }
+.mapa-svg-dept { transition: opacity 0.35s ease; }
+.mapa-svg.apagando .mapa-anel,
+.mapa-svg.apagando .mapa-cerebro { opacity: 0.3; transition: opacity 0.35s ease; }
+.mapa-svg-dept.apagado { opacity: 0.22; }
 .mapa-anel { fill: none; stroke: rgb(var(--m-texto) / 0.28); stroke-width: 1.4; }
 .mapa-raio { fill: none; stroke: rgb(var(--brand-400) / 0.6); stroke-width: 1.6; }
 .mapa-juncao { fill: rgb(var(--m-texto)); opacity: 0.7; }
@@ -124,7 +128,9 @@
   transform: translateX(-50%); white-space: nowrap; text-align: center;
   font-family: var(--m-display); font-size: 26px; letter-spacing: 0.1em;
   pointer-events: none;
+  transition: opacity 0.35s ease;
 }
+.mapa-nucleo-nome.apagado { opacity: 0.3; }
 .mapa-nucleo-nome small {
   display: block; margin-top: 8px;
   font: 600 16px system-ui, sans-serif; letter-spacing: 0.35em; text-transform: uppercase;
@@ -132,7 +138,8 @@
 }
 
 /* departamentos */
-.mapa-dept { --c-texto: var(--c); }
+.mapa-dept { --c-texto: var(--c); transition: opacity 0.35s ease; }
+.mapa-dept.apagado { opacity: 0.28; }
 :root[data-theme="light"] .mapa-dept { --c-texto: color-mix(in srgb, var(--c) 72%, #000); }
 .mapa-badge {
   position: absolute; width: 104px; height: 104px; transform: translate(-50%, -50%);
@@ -194,10 +201,6 @@
   font: 17px var(--m-display); letter-spacing: 0.3em; text-transform: uppercase;
 }
 .mapa-foco .nome:disabled { cursor: default; }
-.mapa-foco .nome span {
-  display: block; margin-top: 8px;
-  font: 500 10.5px system-ui, sans-serif; letter-spacing: 0.18em; color: rgb(var(--m-texto-3));
-}
 .mapa-foco .seta {
   position: absolute; top: 50%; transform: translateY(-50%);
   width: 48px; height: 48px; display: grid; place-items: center;
