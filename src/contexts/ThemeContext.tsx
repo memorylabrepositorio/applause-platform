@@ -15,12 +15,18 @@ interface ThemeState {
   fontSize: FontSize;
   density: Density;
   defaultRoute: string;
+  /** saudação falada ("Bom dia, {nome}") ao logar — ligado por padrão */
+  saudacaoAudio: boolean;
+  /** como a pessoa quer ser chamada na saudação — vazio = usa nome/e-mail cadastrado */
+  apelido: string;
   toggleTheme: () => void;
   setThemePreference: (t: ThemePreference) => void;
   setAccent: (a: Accent) => void;
   setFontSize: (f: FontSize) => void;
   setDensity: (d: Density) => void;
   setDefaultRoute: (r: string) => void;
+  setSaudacaoAudio: (v: boolean) => void;
+  setApelido: (v: string) => void;
 }
 
 const ThemeContext = createContext<ThemeState | undefined>(undefined);
@@ -30,6 +36,8 @@ const ACCENT_KEY = "applause_accent";
 const FONT_SIZE_KEY = "applause_font_size";
 const DENSITY_KEY = "applause_density";
 const DEFAULT_ROUTE_KEY = "applause_default_route";
+const SAUDACAO_AUDIO_KEY = "applause_saudacao_audio";
+const APELIDO_KEY = "applause_apelido";
 
 const FONT_SIZE_PX: Record<FontSize, number> = { compact: 14, normal: 16, comfortable: 18 };
 
@@ -59,6 +67,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [fontSize, setFontSizeState] = useState<FontSize>(() => readStored<FontSize>(FONT_SIZE_KEY, "normal"));
   const [density, setDensityState] = useState<Density>(() => readStored<Density>(DENSITY_KEY, "comfortable"));
   const [defaultRoute, setDefaultRouteState] = useState<string>(() => readStored(DEFAULT_ROUTE_KEY, "/"));
+  const [saudacaoAudio, setSaudacaoAudioState] = useState<boolean>(
+    () => readStored(SAUDACAO_AUDIO_KEY, "1") === "1"
+  );
+  const [apelido, setApelidoState] = useState<string>(() => readStored(APELIDO_KEY, ""));
 
   const theme: ThemeMode = themePreference === "auto" ? (systemDark ? "dark" : "light") : themePreference;
 
@@ -122,6 +134,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [defaultRoute]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(SAUDACAO_AUDIO_KEY, saudacaoAudio ? "1" : "0");
+    } catch {
+      /* idem */
+    }
+  }, [saudacaoAudio]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(APELIDO_KEY, apelido);
+    } catch {
+      /* idem */
+    }
+  }, [apelido]);
+
   function toggleTheme() {
     setThemePreferenceState((t) => {
       const resolved = t === "auto" ? (systemPrefersDark() ? "dark" : "light") : t;
@@ -138,12 +166,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         fontSize,
         density,
         defaultRoute,
+        saudacaoAudio,
+        apelido,
         toggleTheme,
         setThemePreference: setThemePreferenceState,
         setAccent: setAccentState,
         setFontSize: setFontSizeState,
         setDensity: setDensityState,
         setDefaultRoute: setDefaultRouteState,
+        setSaudacaoAudio: setSaudacaoAudioState,
+        setApelido: setApelidoState,
       }}
     >
       {children}

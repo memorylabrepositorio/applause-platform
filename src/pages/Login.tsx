@@ -2,11 +2,14 @@ import { useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { falarSaudacao, primeiroNome } from "@/lib/greeting";
 import Logo from "@/components/Logo";
 import AppearanceMenu from "@/components/AppearanceMenu";
 
 export default function Login() {
   const { session } = useAuth();
+  const { saudacaoAudio, apelido } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,9 +21,15 @@ export default function Login() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    // saudação falada — dispara aqui, dentro do gesto de clique do usuário
+    // (login), que é o que a maioria dos navegadores exige pra liberar áudio
+    if (saudacaoAudio) falarSaudacao(primeiroNome(data.session, apelido));
   }
 
   return (

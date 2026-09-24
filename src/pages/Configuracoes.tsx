@@ -8,6 +8,8 @@ import { getSecretsStatus, saveSecret, type SecretName, type SecretsStatus } fro
 import { loadFinanceiroConfig, saveFinanceiroConfig, testarConexaoAsaas } from "@/lib/financeiro/fetch";
 import type { FinanceiroConfig } from "@/lib/financeiro/fetch";
 import { useTheme, type Accent, type FontSize, type Density, type ThemePreference } from "@/contexts/ThemeContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { falarSaudacao, primeiroNome } from "@/lib/greeting";
 
 const NAV_ITEMS = [
   { to: "/vendas", label: "Vendas" },
@@ -94,7 +96,14 @@ function AparenciaTab() {
     setDensity,
     defaultRoute,
     setDefaultRoute,
+    saudacaoAudio,
+    setSaudacaoAudio,
+    apelido,
+    setApelido,
   } = useTheme();
+  const { session } = useAuth();
+  const [testando, setTestando] = useState(false);
+  const nomePadrao = primeiroNome(session) ?? "";
 
   const THEME_OPTIONS: { id: ThemePreference; label: string }[] = [
     { id: "dark", label: "Escuro" },
@@ -219,6 +228,62 @@ function AparenciaTab() {
             </option>
           ))}
         </select>
+      </section>
+
+      <section className="rounded-lg border border-ink-800 bg-ink-850 p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="mb-1 text-sm font-medium text-ink-100">Saudação por voz ao entrar</p>
+            <p className="text-xs text-ink-400">
+              "Bom dia/boa tarde/boa noite, {"{nome}"}" falado pelo navegador assim que você loga.
+            </p>
+          </div>
+          <button
+            role="switch"
+            aria-checked={saudacaoAudio}
+            onClick={() => setSaudacaoAudio(!saudacaoAudio)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition ${
+              saudacaoAudio ? "bg-brand-600" : "bg-ink-600"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${
+                saudacaoAudio ? "left-[22px]" : "left-0.5"
+              }`}
+            />
+          </button>
+        </div>
+        {saudacaoAudio && (
+          <>
+            <div className="mt-3 space-y-1">
+              <label className="text-xs text-ink-400">Como você quer ser chamado(a)</label>
+              <input
+                type="text"
+                value={apelido}
+                onChange={(e) => setApelido(e.target.value)}
+                placeholder={nomePadrao || "seu nome ou apelido"}
+                maxLength={40}
+                className="w-full max-w-xs rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1.5 text-sm text-ink-50"
+              />
+              <p className="text-[11px] text-ink-500">
+                Em branco, usa {nomePadrao ? `"${nomePadrao}"` : "o nome do seu login"}. Vale só neste
+                navegador/computador.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={testando}
+              onClick={async () => {
+                setTestando(true);
+                await falarSaudacao(primeiroNome(session, apelido));
+                setTestando(false);
+              }}
+              className="mt-3 rounded-md border border-ink-600 px-3 py-1.5 text-xs text-ink-200 transition hover:border-ink-500 disabled:opacity-50"
+            >
+              {testando ? "Falando…" : "Testar"}
+            </button>
+          </>
+        )}
       </section>
 
       <button
