@@ -45,6 +45,7 @@ import {
   monthlySeries,
   productBreakdown,
   titleCase,
+  vendedorKey,
   vendedorLabel,
   type Filters,
   type VendaRow,
@@ -74,8 +75,11 @@ export default function Vendas() {
   const [alunosStatus, setAlunosStatus] = useState<AlunosStatus>("");
   const [alunosFilter, setAlunosFilter] = useState("");
   const [unmatchedFilter, setUnmatchedFilter] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  // popovers flutuantes de detalhamento — ancorados no ponto clicado, não
+  // um modal grande cobrindo a tela
+  const [productPopover, setProductPopover] = useState<{ label: string; x: number; y: number } | null>(null);
+  const [monthPopover, setMonthPopover] = useState<{ key: string; x: number; y: number } | null>(null);
+  const [vendedorPopover, setVendedorPopover] = useState<{ key: string; x: number; y: number } | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
@@ -99,7 +103,14 @@ export default function Vendas() {
     return { totalRevenue, itemCount, ticketMedio, clientCount: cpfSet.size, convRate };
   }, [salesOnly]);
 
-  const monthly = useMemo(() => monthlySeries(salesOnly, filters.year), [salesOnly, filters.year]);
+  // base pro gráfico mensal e pra projeção: ignora o filtro de mês (mas
+  // respeita ano/estúdio/vendedor) — senão, ao selecionar um mês, sobra só
+  // ele com dado e todo o resto zera, e a projeção fica sem base de cálculo
+  const salesForTrend = useMemo(
+    () => (rows ? applyFilters(rows, filters, "month").filter((r) => r.descricao !== "NAO COMPROU") : []),
+    [rows, filters]
+  );
+  const monthly = useMemo(() => monthlySeries(salesForTrend, filters.year), [salesForTrend, filters.year]);
   const vendedores = useMemo(
     () => computeVendedorStats(salesOnly).sort((a, b) => b.revenue - a.revenue),
     [salesOnly]
@@ -134,7 +145,12 @@ export default function Vendas() {
     const intercept = yMean - slope * xMean;
     const next = Math.max(0, intercept + slope * n);
     const trendPct = yMean ? (slope / yMean) * 100 : 0;
-    return { next, trendPct, basedOn: n };
+    const last = withData[withData.length - 1];
+    const prev = withData[withData.length - 2];
+    const momPct = prev && prev.revenue ? ((last.revenue - prev.revenue) / prev.revenue) * 100 : null;
+    const best = pts.reduce((a, b) => (b.revenue > a.revenue ? b : a));
+    const worst = pts.reduce((a, b) => (b.revenue < a.revenue ? b : a));
+    return { next, trendPct, basedOn: n, momPct, lastLabel: last.label, best, worst };
   }, [monthly]);
 
   // detalhamento por produto (usado no gráfico de pizza clicável)
@@ -157,26 +173,28 @@ export default function Vendas() {
   }, [salesOnly]);
 
   const selectedProductDetail = useMemo(() => {
-    if (!selectedProduct) return null;
-    const d = productDetails[selectedProduct];
+    if (!productPopover) return null;
+    const d = productDetails[productPopover.label];
     if (!d) return null;
     return {
-      label: selectedProduct,
+      label: productPopover.label,
       revenue: d.revenue,
       units: d.units,
       ticket: d.units ? d.revenue / d.units : 0,
       topVendedores: Object.entries(d.vendedores).sort((a, b) => b[1] - a[1]).slice(0, 5),
       topClientes: Object.entries(d.clientes).sort((a, b) => b[1] - a[1]).slice(0, 5),
     };
-  }, [selectedProduct, productDetails]);
+  }, [productPopover, productDetails]);
 
-  // detalhamento por mês (mesmo esquema do produto, aplicado ao gráfico mensal)
+  // detalhamento por mês (mesmo esquema do produto, aplicado ao gráfico
+  // mensal) — usa a base sem filtro de mês, senão o mês clicado que não é o
+  // filtrado no momento fica sem dado nenhum
   const monthDetails = useMemo(() => {
     const map: Record<
       string,
       { revenue: number; items: number; vendedores: Record<string, number>; produtos: Record<string, number> }
     > = {};
-    salesOnly.forEach((r) => {
+    salesForTrend.forEach((r) => {
       const mk = monthKey(r.dataVenda);
       if (!mk) return;
       if (!map[mk]) map[mk] = { revenue: 0, items: 0, vendedores: {}, produtos: {} };
@@ -188,12 +206,12 @@ export default function Vendas() {
       map[mk].produtos[pk] = (map[mk].produtos[pk] || 0) + r.total;
     });
     return map;
-  }, [salesOnly]);
+  }, [salesForTrend]);
 
   const selectedMonthDetail = useMemo(() => {
-    if (!selectedMonth) return null;
-    const d = monthDetails[selectedMonth];
-    const label = monthly.find((m) => m.key === selectedMonth)?.label || selectedMonth;
+    if (!monthPopover) return null;
+    const d = monthDetails[monthPopover.key];
+    const label = monthly.find((m) => m.key === monthPopover.key)?.label || monthPopover.key;
     if (!d) return { label, revenue: 0, items: 0, topVendedores: [] as [string, number][], topProdutos: [] as [string, number][] };
     return {
       label,
@@ -202,7 +220,31 @@ export default function Vendas() {
       topVendedores: Object.entries(d.vendedores).sort((a, b) => b[1] - a[1]).slice(0, 5),
       topProdutos: Object.entries(d.produtos).sort((a, b) => b[1] - a[1]).slice(0, 5),
     };
-  }, [selectedMonth, monthDetails, monthly]);
+  }, [monthPopover, monthDetails, monthly]);
+
+  // detalhamento por vendedor (usado nos cards de destaque/menor volume)
+  const vendedorProdutosMap = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {};
+    salesOnly.forEach((r) => {
+      const vk = vendedorKey(r);
+      if (!vk) return;
+      if (!map[vk]) map[vk] = {};
+      const pk = r.descricao?.trim() ? titleCase(r.descricao) : "Não informado";
+      map[vk][pk] = (map[vk][pk] || 0) + r.total;
+    });
+    return map;
+  }, [salesOnly]);
+
+  const selectedVendedorDetail = useMemo(() => {
+    if (!vendedorPopover) return null;
+    const stats = vendedores.find((v) => v.key === vendedorPopover.key);
+    if (!stats) return null;
+    const prod = vendedorProdutosMap[vendedorPopover.key] || {};
+    return {
+      ...stats,
+      topProdutos: Object.entries(prod).sort((a, b) => b[1] - a[1]).slice(0, 5),
+    };
+  }, [vendedorPopover, vendedores, vendedorProdutosMap]);
 
   function exportExcel() {
     const wb = XLSX.utils.book_new();
@@ -253,6 +295,186 @@ export default function Vendas() {
     );
     const suffix = filters.year ? `_${filters.year}${filters.month ? "-" + filters.month : ""}` : "";
     XLSX.writeFile(wb, `relatorio-vendas${suffix}.xlsx`);
+  }
+
+  async function exportPPTX() {
+    const PptxGenJS = (await import("pptxgenjs")).default;
+    const pptx = new PptxGenJS();
+    pptx.defineLayout({ name: "WIDE", width: 13.33, height: 7.5 });
+    pptx.layout = "WIDE";
+
+    const DARK = "0B0B0D";
+    const CARD = "17171B";
+    const BORDER = "232326";
+    const MUTED = "8A8A94";
+    const TEXT = "E8E8EC";
+    const BRAND = "4A9ADE";
+
+    const periodoLabel = filters.year
+      ? `${filters.year}${filters.month ? " · " + (MESES_OPT.find(([v]) => v === filters.month)?.[1] || "") : ""}`
+      : "Todos os períodos";
+
+    // 1. capa
+    let slide = pptx.addSlide();
+    slide.background = { color: DARK };
+    slide.addText("Painel de Vendas", { x: 0.6, y: 2.7, w: 12, h: 1, fontSize: 40, bold: true, color: "FFFFFF" });
+    slide.addText(`${periodoLabel} · Applause Formaturas`, {
+      x: 0.6,
+      y: 3.6,
+      w: 12,
+      h: 0.5,
+      fontSize: 18,
+      color: BRAND,
+    });
+    slide.addText(`Relatório gerado em ${new Date().toLocaleDateString("pt-BR")}`, {
+      x: 0.6,
+      y: 6.9,
+      w: 8,
+      h: 0.4,
+      fontSize: 11,
+      color: MUTED,
+    });
+
+    // 2. resumo executivo
+    slide = pptx.addSlide();
+    slide.background = { color: DARK };
+    slide.addText("Resumo executivo", { x: 0.5, y: 0.4, w: 12, h: 0.6, fontSize: 26, bold: true, color: "FFFFFF" });
+    const kpiItems: [string, string][] = [
+      ["Faturamento total", fmtBRL(kpis.totalRevenue)],
+      ["Itens vendidos", fmtInt(kpis.itemCount)],
+      ["Ticket médio", fmtBRL(kpis.ticketMedio)],
+      ["Clientes únicos", fmtInt(kpis.clientCount)],
+      ["Cruzamento c/ agenda", fmtPct(kpis.convRate)],
+    ];
+    kpiItems.forEach(([label, value], i) => {
+      const x = 0.5 + (i % 3) * 4.15;
+      const y = 1.35 + Math.floor(i / 3) * 2;
+      slide.addShape(pptx.ShapeType.roundRect, {
+        x,
+        y,
+        w: 3.9,
+        h: 1.75,
+        fill: { color: CARD },
+        line: { color: BORDER, width: 1 },
+        rectRadius: 0.08,
+      });
+      slide.addText(label.toUpperCase(), { x: x + 0.25, y: y + 0.2, w: 3.4, h: 0.4, fontSize: 11, color: MUTED });
+      slide.addText(value, { x: x + 0.25, y: y + 0.6, w: 3.4, h: 0.8, fontSize: 22, bold: true, color: "FFFFFF" });
+    });
+    if (projection) {
+      slide.addText(
+        `Projeção pro próximo mês: ${fmtBRL(projection.next)} · tendência de ${
+          projection.trendPct >= 0 ? "+" : ""
+        }${projection.trendPct.toFixed(1)}% ao mês`,
+        { x: 0.5, y: 5.7, w: 12, h: 0.5, fontSize: 14, color: BRAND, italic: true }
+      );
+    }
+
+    // 3. faturamento mensal
+    slide = pptx.addSlide();
+    slide.background = { color: DARK };
+    slide.addText("Faturamento por mês", { x: 0.5, y: 0.35, w: 12, h: 0.6, fontSize: 24, bold: true, color: "FFFFFF" });
+    slide.addChart(
+      pptx.ChartType.bar,
+      [{ name: "Faturamento", labels: monthly.map((m) => m.label), values: monthly.map((m) => m.revenue) }],
+      {
+        x: 0.5,
+        y: 1.1,
+        w: 12.3,
+        h: 5.6,
+        chartColors: [BRAND],
+        showLegend: false,
+        showValue: false,
+        catAxisLabelColor: MUTED,
+        valAxisLabelColor: MUTED,
+        catAxisLineColor: BORDER,
+        valAxisLineColor: BORDER,
+        plotArea: { fill: { color: DARK } },
+        chartArea: { fill: { color: DARK } },
+      }
+    );
+
+    // 4. ranking de vendedores
+    slide = pptx.addSlide();
+    slide.background = { color: DARK };
+    slide.addText("Vendas por vendedor", { x: 0.5, y: 0.35, w: 12, h: 0.6, fontSize: 24, bold: true, color: "FFFFFF" });
+    const headOpts = { bold: true, color: MUTED, fontSize: 11, fill: { color: CARD } };
+    const bodyOpts = { color: TEXT, fontSize: 13, fill: { color: DARK } };
+    const tableRows = [
+      [
+        { text: "Vendedor", options: headOpts },
+        { text: "Faturamento", options: headOpts },
+        { text: "Itens", options: headOpts },
+        { text: "Conversão", options: headOpts },
+      ],
+      ...vendedores.slice(0, 12).map((v) => [
+        { text: v.label, options: bodyOpts },
+        { text: fmtBRL(v.revenue), options: bodyOpts },
+        { text: fmtInt(v.items), options: bodyOpts },
+        { text: fmtPct(v.conv), options: bodyOpts },
+      ]),
+    ];
+    slide.addTable(tableRows, {
+      x: 0.5,
+      y: 1.15,
+      w: 12.3,
+      fontSize: 13,
+      border: { type: "solid", color: BORDER, pt: 0.5 },
+      autoPage: false,
+    });
+
+    // 5. mix de produtos
+    slide = pptx.addSlide();
+    slide.background = { color: DARK };
+    slide.addText("Faturamento por produto", {
+      x: 0.5,
+      y: 0.35,
+      w: 12,
+      h: 0.6,
+      fontSize: 24,
+      bold: true,
+      color: "FFFFFF",
+    });
+    slide.addChart(
+      pptx.ChartType.pie,
+      [{ name: "Produtos", labels: produtos.map((p) => p.label), values: produtos.map((p) => p.value) }],
+      {
+        x: 2.4,
+        y: 1.05,
+        w: 8.5,
+        h: 5.7,
+        chartColors: palette.map((c) => c.replace("#", "")),
+        showLegend: true,
+        legendPos: "b",
+        legendColor: MUTED,
+        dataLabelColor: "FFFFFF",
+        showPercent: true,
+        showValue: false,
+      }
+    );
+
+    // 6. projeção e destaques
+    slide = pptx.addSlide();
+    slide.background = { color: DARK };
+    slide.addText("Projeção e destaques", { x: 0.5, y: 0.4, w: 12, h: 0.6, fontSize: 26, bold: true, color: "FFFFFF" });
+    const bullets: string[] = [];
+    if (projection) {
+      bullets.push(
+        `Projeção pro próximo mês: ${fmtBRL(projection.next)} (tendência de ${
+          projection.trendPct >= 0 ? "+" : ""
+        }${projection.trendPct.toFixed(1)}% ao mês, com base nos últimos ${projection.basedOn} meses)`
+      );
+    }
+    if (topVendedor) bullets.push(`Vendedor destaque: ${topVendedor.label} — ${fmtBRL(topVendedor.revenue)} em ${fmtInt(topVendedor.items)} itens`);
+    if (bottomVendedor) bullets.push(`Menor volume: ${bottomVendedor.label} — ${fmtBRL(bottomVendedor.revenue)} em ${fmtInt(bottomVendedor.items)} itens`);
+    if (produtos[0]) bullets.push(`Produto mais vendido: ${produtos[0].label} (${fmtBRL(produtos[0].value)})`);
+    slide.addText(
+      bullets.map((b) => ({ text: b, options: { bullet: true, breakLine: true } })),
+      { x: 0.6, y: 1.3, w: 12, h: 4.5, fontSize: 16, color: TEXT, lineSpacing: 32 }
+    );
+
+    const suffix = filters.year ? `_${filters.year}${filters.month ? "-" + filters.month : ""}` : "";
+    await pptx.writeFile({ fileName: `relatorio-vendas${suffix}.pptx` });
   }
 
   function exportCSV() {
@@ -389,6 +611,15 @@ export default function Vendas() {
               <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-md border border-ink-700 bg-ink-850 shadow-xl">
                 <button
                   onClick={() => {
+                    exportPPTX();
+                    setExportOpen(false);
+                  }}
+                  className="block w-full px-3 py-2 text-left text-sm text-ink-200 hover:bg-ink-800"
+                >
+                  Apresentação (.pptx)
+                </button>
+                <button
+                  onClick={() => {
                     exportExcel();
                     setExportOpen(false);
                   }}
@@ -488,29 +719,51 @@ export default function Vendas() {
         <Kpi label="Cruzamento c/ agenda" value={fmtPct(kpis.convRate)} icon={CalendarCheck2} tone="emerald" />
       </div>
 
-      {/* central de planejamento — previsibilidade e destaques de vendedores */}
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-ink-800 bg-ink-850 p-3.5">
-          <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-ink-400">
-            <Sparkles size={14} className="text-brand-400" /> Projeção próximo mês
+      {/* central de planejamento — previsibilidade */}
+      <div className="mb-3 rounded-xl border border-ink-800 bg-ink-850 p-3.5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-ink-400">
+            <Sparkles size={14} className="text-brand-400" /> Projeção e tendência
           </div>
-          {projection ? (
-            <>
-              <p className="text-lg font-semibold tabular-nums">{fmtBRL(projection.next)}</p>
-              <p
-                className={`mt-1 flex items-center gap-1 text-xs ${
-                  projection.trendPct >= 0 ? "text-emerald-400" : "text-amber-400"
-                }`}
-              >
-                {projection.trendPct >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                Tendência de {fmtPct(Math.abs(projection.trendPct))} ao mês (últimos {projection.basedOn} meses)
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-ink-400">Dados insuficientes para projetar.</p>
+          {projection && (
+            <p
+              className={`flex items-center gap-1 text-xs ${
+                projection.trendPct >= 0 ? "text-emerald-400" : "text-amber-400"
+              }`}
+            >
+              {projection.trendPct >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+              {fmtPct(Math.abs(projection.trendPct))} ao mês, em média (últimos {projection.basedOn} meses)
+            </p>
           )}
         </div>
-        <div className="rounded-xl border border-ink-800 bg-ink-850 p-3.5">
+        {projection ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <MiniStat label="Projeção próx. mês" value={fmtBRL(projection.next)} />
+            <MiniStat
+              label={`Vs. ${projection.lastLabel}`}
+              value={projection.momPct === null ? "—" : `${projection.momPct >= 0 ? "+" : ""}${projection.momPct.toFixed(1)}%`}
+            />
+            <MiniStat label="Melhor mês" value={`${projection.best.label} · ${fmtBRL(projection.best.revenue)}`} />
+            <MiniStat label="Mês mais fraco" value={`${projection.worst.label} · ${fmtBRL(projection.worst.revenue)}`} />
+          </div>
+        ) : (
+          <p className="text-sm text-ink-400">
+            Ainda não há meses suficientes com venda no ano selecionado pra calcular uma tendência.
+          </p>
+        )}
+      </div>
+
+      {/* destaques de vendedores — clique pra ver o detalhamento */}
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={(e) =>
+            topVendedor &&
+            setVendedorPopover((p) => (p?.key === topVendedor.key ? null : { key: topVendedor.key, x: e.clientX, y: e.clientY }))
+          }
+          disabled={!topVendedor}
+          className="rounded-xl border border-ink-800 bg-ink-850 p-3.5 text-left transition hover:border-emerald-700/60 disabled:cursor-default disabled:hover:border-ink-800"
+        >
           <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-ink-400">
             <Trophy size={14} className="text-emerald-400" /> Vendedor destaque
           </div>
@@ -518,14 +771,24 @@ export default function Vendas() {
             <>
               <p className="truncate text-lg font-semibold">{topVendedor.label}</p>
               <p className="mt-1 text-xs text-ink-400">
-                {fmtBRL(topVendedor.revenue)} · {fmtInt(topVendedor.items)} itens
+                {fmtBRL(topVendedor.revenue)} · {fmtInt(topVendedor.items)} itens · clique pra detalhar
               </p>
             </>
           ) : (
             <p className="text-sm text-ink-400">Sem dados no período.</p>
           )}
-        </div>
-        <div className="rounded-xl border border-ink-800 bg-ink-850 p-3.5">
+        </button>
+        <button
+          type="button"
+          onClick={(e) =>
+            bottomVendedor &&
+            setVendedorPopover((p) =>
+              p?.key === bottomVendedor.key ? null : { key: bottomVendedor.key, x: e.clientX, y: e.clientY }
+            )
+          }
+          disabled={!bottomVendedor}
+          className="rounded-xl border border-ink-800 bg-ink-850 p-3.5 text-left transition hover:border-amber-700/60 disabled:cursor-default disabled:hover:border-ink-800"
+        >
           <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-ink-400">
             <TrendingDown size={14} className="text-amber-400" /> Menor volume
           </div>
@@ -533,13 +796,13 @@ export default function Vendas() {
             <>
               <p className="truncate text-lg font-semibold">{bottomVendedor.label}</p>
               <p className="mt-1 text-xs text-ink-400">
-                {fmtBRL(bottomVendedor.revenue)} · {fmtInt(bottomVendedor.items)} itens
+                {fmtBRL(bottomVendedor.revenue)} · {fmtInt(bottomVendedor.items)} itens · clique pra detalhar
               </p>
             </>
           ) : (
             <p className="text-sm text-ink-400">Sem dados no período.</p>
           )}
-        </div>
+        </button>
       </div>
 
       {/* faturamento mensal */}
@@ -584,10 +847,10 @@ export default function Vendas() {
               isAnimationActive
               animationDuration={700}
               animationEasing="ease-out"
-              onClick={(d: { key: string }) => {
+              onClick={(d: { key: string }, _i: number, e: React.MouseEvent) => {
                 const month = d.key.split("-")[1];
                 setFilters((f) => ({ ...f, month: f.month === month ? undefined : month }));
-                setSelectedMonth((m) => (m === d.key ? null : d.key));
+                setMonthPopover((p) => (p?.key === d.key ? null : { key: d.key, x: e.clientX, y: e.clientY }));
               }}
             >
               {monthly.map((m) => {
@@ -668,9 +931,10 @@ export default function Vendas() {
                 paddingAngle={2}
                 isAnimationActive
                 animationDuration={700}
-                onClick={(d: { label?: string }) => {
+                onClick={(d: { label?: string }, _i: number, e: React.MouseEvent) => {
                   if (!d.label || d.label === "Outros") return;
-                  setSelectedProduct((p) => (p === d.label ? null : d.label!));
+                  const label = d.label;
+                  setProductPopover((p) => (p?.label === label ? null : { label, x: e.clientX, y: e.clientY }));
                 }}
               >
                 {produtos.map((p, i) => (
@@ -825,31 +1089,43 @@ export default function Vendas() {
         </div>
       </div>
 
-      {selectedProductDetail && (
-        <DetailModal title={selectedProductDetail.label} onClose={() => setSelectedProduct(null)}>
-          <div className="mb-4 grid grid-cols-3 gap-3">
+      {selectedProductDetail && productPopover && (
+        <DetailPopover anchor={productPopover} title={selectedProductDetail.label} onClose={() => setProductPopover(null)}>
+          <div className="mb-3 grid grid-cols-3 gap-2">
             <MiniStat label="Faturamento" value={fmtBRL(selectedProductDetail.revenue)} />
             <MiniStat label="Unidades" value={fmtInt(selectedProductDetail.units)} />
             <MiniStat label="Ticket médio" value={fmtBRL(selectedProductDetail.ticket)} />
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-3">
             <TopList title="Top vendedores" entries={selectedProductDetail.topVendedores} />
             <TopList title="Top clientes" entries={selectedProductDetail.topClientes} />
           </div>
-        </DetailModal>
+        </DetailPopover>
       )}
 
-      {selectedMonthDetail && (
-        <DetailModal title={`Detalhamento — ${selectedMonthDetail.label}`} onClose={() => setSelectedMonth(null)}>
-          <div className="mb-4 grid grid-cols-2 gap-3">
+      {selectedMonthDetail && monthPopover && (
+        <DetailPopover anchor={monthPopover} title={`Detalhamento — ${selectedMonthDetail.label}`} onClose={() => setMonthPopover(null)}>
+          <div className="mb-3 grid grid-cols-2 gap-2">
             <MiniStat label="Faturamento" value={fmtBRL(selectedMonthDetail.revenue)} />
             <MiniStat label="Itens vendidos" value={fmtInt(selectedMonthDetail.items)} />
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-3">
             <TopList title="Top vendedores" entries={selectedMonthDetail.topVendedores} />
             <TopList title="Top produtos" entries={selectedMonthDetail.topProdutos} />
           </div>
-        </DetailModal>
+        </DetailPopover>
+      )}
+
+      {selectedVendedorDetail && vendedorPopover && (
+        <DetailPopover anchor={vendedorPopover} title={selectedVendedorDetail.label} onClose={() => setVendedorPopover(null)}>
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <MiniStat label="Faturamento" value={fmtBRL(selectedVendedorDetail.revenue)} />
+            <MiniStat label="Itens" value={fmtInt(selectedVendedorDetail.items)} />
+            <MiniStat label="Ticket médio" value={fmtBRL(selectedVendedorDetail.ticket)} />
+            <MiniStat label="Conversão" value={fmtPct(selectedVendedorDetail.conv)} />
+          </div>
+          <TopList title="Top produtos vendidos" entries={selectedVendedorDetail.topProdutos} />
+        </DetailPopover>
       )}
     </Layout>
   );
@@ -972,57 +1248,73 @@ function Badge({ good, children }: { good: boolean; children: React.ReactNode })
   );
 }
 
-// painel de detalhamento — mesmo esquema (clicar num elemento do gráfico
-// abre um resumo) usado tanto pro gráfico de produtos quanto pro mensal
-function DetailModal({
+// painel de detalhamento — mesmo esquema (clicar num elemento do gráfico ou
+// num card abre um resumo) usado no produto, no mês e no vendedor. É um
+// popup pequeno, flutuante, ancorado do lado do que foi clicado — não um
+// modal grande cobrindo a tela — com a mesma translucidez/blur da sidebar.
+function DetailPopover({
+  anchor,
   title,
   onClose,
   children,
 }: {
+  anchor: { x: number; y: number };
   title: string;
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const WIDTH = 340;
+  const MAX_HEIGHT = 420;
+  const MARGIN = 12;
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+
+  let left = anchor.x + 16;
+  if (left + WIDTH + MARGIN > vw) left = anchor.x - WIDTH - 16;
+  left = Math.max(MARGIN, Math.min(left, vw - WIDTH - MARGIN));
+
+  let top = anchor.y - 20;
+  top = Math.max(MARGIN, Math.min(top, vh - MAX_HEIGHT - MARGIN));
+
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
+    <>
+      <div className="fixed inset-0 z-[55]" onClick={onClose} />
       <div
-        className="max-h-[85vh] w-full max-w-2xl overflow-auto rounded-xl border border-ink-700 bg-ink-850 p-5 shadow-2xl"
+        className="sidebar-glass fixed z-[60] overflow-auto rounded-xl border border-white/10 p-3.5 shadow-2xl"
+        style={{ left, top, width: WIDTH, maxHeight: MAX_HEIGHT }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <p className="text-base font-semibold text-ink-50">{title}</p>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-semibold text-ink-50">{title}</p>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-ink-400 transition hover:bg-ink-800 hover:text-ink-100"
+            className="shrink-0 rounded-md p-1 text-ink-400 transition hover:bg-white/10 hover:text-ink-100"
             aria-label="Fechar"
           >
-            <X size={18} />
+            <X size={15} />
           </button>
         </div>
         {children}
       </div>
-    </div>
+    </>
   );
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-ink-800 bg-ink-900/60 p-3">
-      <p className="text-xs uppercase tracking-wide text-ink-400">{label}</p>
-      <p className="mt-1 text-base font-semibold tabular-nums text-ink-50">{value}</p>
+    <div className="rounded-lg border border-ink-800/80 bg-ink-900/50 p-2">
+      <p className="truncate text-[10px] uppercase tracking-wide text-ink-400">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-ink-50">{value}</p>
     </div>
   );
 }
 
 function TopList({ title, entries }: { title: string; entries: [string, number][] }) {
   return (
-    <div className="rounded-lg border border-ink-800 bg-ink-900/60 p-3">
-      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-400">{title}</p>
+    <div className="rounded-lg border border-ink-800/80 bg-ink-900/50 p-2.5">
+      <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-ink-400">{title}</p>
       {entries.length ? (
-        <ul className="space-y-1.5 text-sm">
+        <ul className="space-y-1 text-xs">
           {entries.map(([label, value]) => (
             <li key={label} className="flex items-center justify-between gap-2">
               <span className="truncate text-ink-200">{label}</span>
@@ -1033,7 +1325,7 @@ function TopList({ title, entries }: { title: string; entries: [string, number][
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-ink-500">Sem dados.</p>
+        <p className="text-xs text-ink-500">Sem dados.</p>
       )}
     </div>
   );

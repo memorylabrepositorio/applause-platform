@@ -15,6 +15,7 @@ import {
   PinOff,
   Power,
   Menu,
+  Settings,
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import AppearanceMenu from "@/components/AppearanceMenu";
@@ -30,6 +31,7 @@ const MODULES = [
   { to: "/p4f", label: "P4F / Estúdio", icon: Camera },
   { to: "/contas-pagar", label: "Contas a pagar", icon: Receipt },
   { to: "/lucro", label: "Lucro por contrato", icon: TrendingUp },
+  { to: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 const PIN_KEY = "applause_sidebar_pinned";

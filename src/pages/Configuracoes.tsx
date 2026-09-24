@@ -1,11 +1,233 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Palette, Bot } from "lucide-react";
 import Layout from "@/components/Layout";
 import { loadSdrConfig, saveSdrConfig } from "@/lib/sdr/fetch";
 import type { SdrCanal, SdrConfig } from "@/lib/sdr/engine";
 import { getSecretsStatus, saveSecret, type SecretsStatus } from "@/lib/settings/fetch";
+import { useTheme, type Accent, type FontSize, type Density, type ThemePreference } from "@/contexts/ThemeContext";
+
+const NAV_ITEMS = [
+  { to: "/vendas", label: "Vendas" },
+  { to: "/checklist", label: "Checklist" },
+  { to: "/atendimento", label: "Atendimento" },
+  { to: "/sdr", label: "SDR (IA)" },
+  { to: "/financeiro", label: "Financeiro" },
+  { to: "/producao", label: "Produção" },
+  { to: "/p4f", label: "P4F / Estúdio" },
+  { to: "/contas-pagar", label: "Contas a pagar" },
+  { to: "/lucro", label: "Lucro por contrato" },
+];
+
+type Tab = "aparencia" | "agente";
 
 export default function Configuracoes() {
+  const location = useLocation();
+  const [tab, setTab] = useState<Tab>(location.hash === "#agente" ? "agente" : "aparencia");
+
+  return (
+    <Layout>
+      <header className="mb-4">
+        <h1 className="text-xl font-semibold">Configurações</h1>
+        <p className="text-sm text-ink-400">Aparência da plataforma e comportamento do agente de SDR</p>
+      </header>
+
+      <div className="mb-4 flex gap-2 border-b border-ink-800">
+        <TabButton active={tab === "aparencia"} onClick={() => setTab("aparencia")} icon={Palette}>
+          Aparência
+        </TabButton>
+        <TabButton active={tab === "agente"} onClick={() => setTab("agente")} icon={Bot}>
+          Agente de IA (SDR)
+        </TabButton>
+      </div>
+
+      {tab === "aparencia" ? <AparenciaTab /> : <AgenteTab />}
+    </Layout>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  icon: Icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof Palette;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 border-b-2 px-1 pb-2.5 text-sm transition ${
+        active ? "border-brand-500 text-ink-50" : "border-transparent text-ink-400 hover:text-ink-100"
+      }`}
+    >
+      <Icon size={15} strokeWidth={1.75} />
+      {children}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Aparência — tema, cor de destaque, tamanho de fonte, densidade e a
+// página inicial padrão, tudo salvo por usuário (localStorage)
+// ---------------------------------------------------------------------
+function AparenciaTab() {
+  const navigate = useNavigate();
+  const {
+    themePreference,
+    setThemePreference,
+    accent,
+    setAccent,
+    fontSize,
+    setFontSize,
+    density,
+    setDensity,
+    defaultRoute,
+    setDefaultRoute,
+  } = useTheme();
+
+  const THEME_OPTIONS: { id: ThemePreference; label: string }[] = [
+    { id: "dark", label: "Escuro" },
+    { id: "light", label: "Claro" },
+    { id: "auto", label: "Automático" },
+  ];
+  const ACCENTS: { id: Accent; label: string; swatch: string }[] = [
+    { id: "blue", label: "Azul", swatch: "#0464b0" },
+    { id: "violet", label: "Violeta", swatch: "#4a3aa7" },
+    { id: "green", label: "Verde", swatch: "#1baf7a" },
+    { id: "orange", label: "Laranja", swatch: "#eb6834" },
+  ];
+  const FONT_OPTIONS: { id: FontSize; label: string; sample: string }[] = [
+    { id: "compact", label: "Compacto", sample: "text-xs" },
+    { id: "normal", label: "Normal", sample: "text-sm" },
+    { id: "comfortable", label: "Confortável", sample: "text-base" },
+  ];
+  const DENSITY_OPTIONS: { id: Density; label: string; desc: string }[] = [
+    { id: "comfortable", label: "Confortável", desc: "Mais espaço entre linhas e cards (padrão)" },
+    { id: "compact", label: "Compacta", desc: "Menos espaçamento — mais linhas visíveis por tela" },
+  ];
+
+  return (
+    <div className="max-w-3xl space-y-4">
+      <section className="rounded-lg border border-ink-800 bg-ink-850 p-4">
+        <p className="mb-1 text-sm font-medium text-ink-100">Tema</p>
+        <p className="mb-3 text-xs text-ink-400">
+          "Automático" segue a preferência de claro/escuro do seu sistema operacional.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {THEME_OPTIONS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setThemePreference(t.id)}
+              className={`rounded-md border px-3.5 py-1.5 text-sm transition ${
+                themePreference === t.id
+                  ? "border-brand-600 bg-brand-950 text-brand-300"
+                  : "border-ink-600 text-ink-300 hover:text-ink-50"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-ink-800 bg-ink-850 p-4">
+        <p className="mb-1 text-sm font-medium text-ink-100">Cor de destaque</p>
+        <p className="mb-3 text-xs text-ink-400">Usada em botões, links ativos e gráficos.</p>
+        <div className="flex flex-wrap gap-3">
+          {ACCENTS.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => setAccent(a.id)}
+              title={a.label}
+              className="flex flex-col items-center gap-1.5"
+            >
+              <span
+                className={`h-9 w-9 rounded-full border-2 transition ${
+                  accent === a.id ? "border-ink-50 scale-110" : "border-transparent hover:scale-105"
+                }`}
+                style={{ background: a.swatch }}
+              />
+              <span className="text-xs text-ink-400">{a.label}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-ink-800 bg-ink-850 p-4">
+        <p className="mb-1 text-sm font-medium text-ink-100">Tamanho da fonte</p>
+        <p className="mb-3 text-xs text-ink-400">Ajusta o tamanho de todo o texto da plataforma.</p>
+        <div className="flex flex-wrap gap-2">
+          {FONT_OPTIONS.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFontSize(f.id)}
+              className={`rounded-md border px-3.5 py-1.5 transition ${f.sample} ${
+                fontSize === f.id
+                  ? "border-brand-600 bg-brand-950 text-brand-300"
+                  : "border-ink-600 text-ink-300 hover:text-ink-50"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-ink-800 bg-ink-850 p-4">
+        <p className="mb-1 text-sm font-medium text-ink-100">Densidade das tabelas</p>
+        <p className="mb-3 text-xs text-ink-400">Controla o espaçamento das linhas em tabelas e cards.</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {DENSITY_OPTIONS.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => setDensity(d.id)}
+              className={`rounded-md border px-3.5 py-2.5 text-left transition ${
+                density === d.id ? "border-brand-600 bg-brand-950/40" : "border-ink-600 hover:border-ink-500"
+              }`}
+            >
+              <p className={`text-sm ${density === d.id ? "text-brand-300" : "text-ink-100"}`}>{d.label}</p>
+              <p className="mt-0.5 text-xs text-ink-400">{d.desc}</p>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-ink-800 bg-ink-850 p-4">
+        <p className="mb-1 text-sm font-medium text-ink-100">Página inicial</p>
+        <p className="mb-3 text-xs text-ink-400">Qual painel abre primeiro ao entrar na plataforma.</p>
+        <select
+          value={defaultRoute}
+          onChange={(e) => setDefaultRoute(e.target.value)}
+          className="w-full max-w-sm rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1.5 text-sm"
+        >
+          <option value="/">Visão geral (Dashboard)</option>
+          {NAV_ITEMS.map((n) => (
+            <option key={n.to} value={n.to}>
+              {n.label}
+            </option>
+          ))}
+        </select>
+      </section>
+
+      <button
+        onClick={() => navigate("/")}
+        className="text-sm text-ink-400 transition hover:text-ink-100"
+      >
+        ← Voltar pra visão geral
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Agente de IA (SDR) — comportamento e integrações de canal (código
+// original desta página, só movido pra dentro de uma aba)
+// ---------------------------------------------------------------------
+function AgenteTab() {
   const [config, setConfig] = useState<SdrConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [secretsStatus, setSecretsStatus] = useState<SecretsStatus | null>(null);
@@ -37,36 +259,15 @@ export default function Configuracoes() {
   }
 
   if (error) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-ink-900 text-ink-50">
-        <p className="text-red-400">Não foi possível carregar: {error}</p>
-        <Link to="/sdr" className="text-brand-400 hover:text-brand-300">← Voltar</Link>
-      </div>
-    );
+    return <p className="text-red-400">Não foi possível carregar: {error}</p>;
   }
 
   if (!config) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-ink-900 text-ink-300">
-        Carregando configurações…
-      </div>
-    );
+    return <p className="text-ink-400">Carregando configurações…</p>;
   }
 
   return (
-    <Layout>
-      <header className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Configurações</h1>
-          <p className="text-sm text-ink-400">Comportamento do agente e integrações da plataforma</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link to="/sdr" className="text-sm text-ink-300 hover:text-ink-50">
-            ← Voltar pro SDR
-          </Link>
-        </div>
-      </header>
-
+    <>
       {/* comportamento do agente */}
       <section className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
         <p className="mb-1 text-sm font-medium text-ink-100">Comportamento do agente</p>
@@ -167,7 +368,7 @@ export default function Configuracoes() {
           onSaved={refresh}
         />
       </IntegracaoCard>
-    </Layout>
+    </>
   );
 }
 

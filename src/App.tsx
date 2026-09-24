@@ -1,6 +1,6 @@
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
@@ -16,6 +16,13 @@ import Lucro from "@/pages/Lucro";
 import Configuracoes from "@/pages/Configuracoes";
 import ModulePlaceholder from "@/pages/ModulePlaceholder";
 
+// respeita a página inicial escolhida em Configurações > Aparência
+function Home() {
+  const { defaultRoute } = useTheme();
+  if (defaultRoute && defaultRoute !== "/") return <Navigate to={defaultRoute} replace />;
+  return <Dashboard />;
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -27,7 +34,7 @@ export default function App() {
             path="/"
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <Home />
               </ProtectedRoute>
             }
           />
