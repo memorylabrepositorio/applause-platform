@@ -96,3 +96,40 @@
 * {
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
+
+/* profundidade global — todo card padrão (border-ink-800 + bg-ink-850) ganha
+   uma sombra suave automaticamente, sem precisar tocar em cada página */
+.border-ink-800.bg-ink-850 {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 8px 24px -12px rgba(0, 0, 0, 0.55);
+}
+
+/* cards clicáveis (links de módulo, linhas de tabela, KPIs interativos)
+   ganham um leve "flutuar" no hover pra reforçar a profundidade */
+a.border-ink-700:hover,
+a.border-ink-800:hover {
+  transform: translateY(-2px);
+}
+a.border-ink-700,
+a.border-ink-800 {
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--ink-700) / 0.8);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--ink-600) / 0.9);
+  background-clip: padding-box;
+}

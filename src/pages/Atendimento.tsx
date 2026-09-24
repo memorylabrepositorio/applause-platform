@@ -49,6 +49,7 @@ export default function Atendimento() {
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "nome", dir: "asc" });
 
   const [orfaosOpen, setOrfaosOpen] = useState(false);
+  const [tarefasOpen, setTarefasOpen] = useState(true);
   const [orfaosFilter, setOrfaosFilter] = useState("");
 
   const [drawerCodigo, setDrawerCodigo] = useState<number | null>(null);
@@ -318,15 +319,14 @@ export default function Atendimento() {
         <Kpi label="Atendidos" value={kpis.atendidos} />
       </div>
 
-      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* tabela de alunos */}
-        <div className="rounded-lg border border-ink-800 bg-ink-850 p-3 lg:col-span-2">
-          <p className="mb-3 text-sm font-medium text-ink-100">
-            {ordenados.length.toLocaleString("pt-BR")} aluno(s) encontrado(s)
-            {ordenados.length > RENDER_CAP ? ` — mostrando ${RENDER_CAP}` : ""}
-          </p>
-          <div className="max-h-[36rem] overflow-auto">
-            <table className="w-full text-sm">
+      {/* tabela de alunos — largura cheia, sem disputar espaço com painéis laterais */}
+      <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+        <p className="mb-3 text-sm font-medium text-ink-100">
+          {ordenados.length.toLocaleString("pt-BR")} aluno(s) encontrado(s)
+          {ordenados.length > RENDER_CAP ? ` — mostrando ${RENDER_CAP}` : ""}
+        </p>
+        <div className="max-h-[36rem] overflow-auto">
+          <table className="w-full text-sm">
               <thead className="sticky top-0 bg-ink-850">
                 <tr className="border-b border-ink-800 text-left text-xs uppercase text-ink-400">
                   {ALUNO_COLS.map((c) => (
@@ -382,14 +382,20 @@ export default function Atendimento() {
               </tbody>
             </table>
           </div>
-        </div>
+      </div>
 
-        {/* tarefas globais */}
-        <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
-          <p className="mb-3 text-sm font-medium text-ink-100">
-            Tarefas pendentes ({tarefasGlobais.length})
-          </p>
-          <div className="max-h-[36rem] space-y-2 overflow-auto">
+      {/* tarefas globais — recolhível, não disputa espaço lateral com a tabela */}
+      <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+        <button
+          onClick={() => setTarefasOpen((v) => !v)}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <span className="text-sm font-medium text-ink-100">
+            {tarefasOpen ? "▾" : "▸"} Tarefas pendentes ({tarefasGlobais.length})
+          </span>
+        </button>
+        {tarefasOpen && (
+          <div className="mt-3 max-h-[28rem] space-y-2 overflow-auto">
             {!tarefasGlobais.length && <p className="text-sm text-ink-400">Nenhuma tarefa pendente. 🎉</p>}
             {tarefasGlobais.map(({ tarefa, aluno }) => {
               const atrasada = !!(tarefa.prazo && tarefa.prazo < todayISO());
@@ -418,7 +424,7 @@ export default function Atendimento() {
               );
             })}
           </div>
-        </div>
+        )}
       </div>
 
       {/* agendamentos órfãos */}
