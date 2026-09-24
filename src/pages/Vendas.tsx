@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Wallet, ShoppingBag, Receipt, Users, CalendarCheck2, type LucideIcon } from "lucide-react";
 import Layout from "@/components/Layout";
 import {
   BarChart,
@@ -255,11 +256,11 @@ export default function Vendas() {
 
       {/* KPIs */}
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <Kpi label="Faturamento total" value={fmtBRL(kpis.totalRevenue)} />
-        <Kpi label="Itens vendidos" value={fmtInt(kpis.itemCount)} />
-        <Kpi label="Ticket médio" value={fmtBRL(kpis.ticketMedio)} />
-        <Kpi label="Clientes únicos" value={fmtInt(kpis.clientCount)} />
-        <Kpi label="Cruzamento c/ agenda" value={fmtPct(kpis.convRate)} />
+        <Kpi label="Faturamento total" value={fmtBRL(kpis.totalRevenue)} icon={Wallet} tone="brand" />
+        <Kpi label="Itens vendidos" value={fmtInt(kpis.itemCount)} icon={ShoppingBag} tone="violet" />
+        <Kpi label="Ticket médio" value={fmtBRL(kpis.ticketMedio)} icon={Receipt} tone="amber" />
+        <Kpi label="Clientes únicos" value={fmtInt(kpis.clientCount)} icon={Users} tone="sky" />
+        <Kpi label="Cruzamento c/ agenda" value={fmtPct(kpis.convRate)} icon={CalendarCheck2} tone="emerald" />
       </div>
 
       {/* faturamento mensal */}
@@ -499,11 +500,39 @@ function FilterField({ label, children }: { label: string; children: React.React
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+const KPI_TONES = {
+  brand: "from-brand-600/20 to-brand-600/5 text-brand-300",
+  emerald: "from-emerald-600/20 to-emerald-600/5 text-emerald-300",
+  violet: "from-violet-600/20 to-violet-600/5 text-violet-300",
+  amber: "from-amber-600/20 to-amber-600/5 text-amber-300",
+  sky: "from-sky-600/20 to-sky-600/5 text-sky-300",
+} as const;
+
+function Kpi({
+  label,
+  value,
+  icon: Icon,
+  tone = "brand",
+}: {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  tone?: keyof typeof KPI_TONES;
+}) {
   return (
-    <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
-      <p className="text-xs uppercase tracking-wide text-ink-400">{label}</p>
-      <p className="mt-1 text-lg font-semibold">{value}</p>
+    <div className="group relative overflow-hidden rounded-xl border border-ink-800 bg-ink-850 p-3.5 transition-all duration-150 hover:border-ink-700">
+      <div
+        className={`absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br opacity-70 blur-xl transition-opacity duration-200 group-hover:opacity-100 ${KPI_TONES[tone]}`}
+      />
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-xs uppercase tracking-wide text-ink-400">{label}</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums">{value}</p>
+        </div>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${KPI_TONES[tone]}`}>
+          <Icon size={16} strokeWidth={1.75} />
+        </span>
+      </div>
     </div>
   );
 }

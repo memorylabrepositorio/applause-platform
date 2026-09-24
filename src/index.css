@@ -133,3 +133,23 @@ a.border-ink-800 {
   background: rgb(var(--ink-600) / 0.9);
   background-clip: padding-box;
 }
+
+/* glow ambiente fixo atrás de tudo — sem isso, o blur da sidebar não tem
+   nada visível pra desfocar e a translucidez não se percebe */
+body {
+  background-color: rgb(var(--ink-900));
+  background-image:
+    radial-gradient(60rem 40rem at -10% -10%, rgb(var(--brand-600) / 0.16), transparent 60%),
+    radial-gradient(50rem 36rem at 110% 10%, rgb(var(--brand-500) / 0.10), transparent 55%),
+    radial-gradient(40rem 30rem at 20% 120%, rgb(var(--brand-700) / 0.10), transparent 55%);
+  background-attachment: fixed;
+}
+
+.sidebar-glass {
+  background: rgb(var(--ink-850) / 0.55);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow:
+    inset 1px 0 0 rgb(255 255 255 / 0.05),
+    8px 0 40px -12px rgba(0, 0, 0, 0.7);
+}
