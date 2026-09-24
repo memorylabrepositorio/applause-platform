@@ -1,6 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Wallet, ShoppingBag, Receipt, Users, CalendarCheck2, type LucideIcon } from "lucide-react";
+import * as XLSX from "xlsx";
+import {
+  Wallet,
+  ShoppingBag,
+  Receipt,
+  Users,
+  CalendarCheck2,
+  Trophy,
+  TrendingDown,
+  TrendingUp,
+  Sparkles,
+  Download,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import Layout from "@/components/Layout";
 import {
   BarChart,
@@ -11,9 +25,12 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  PieChart,
+  Pie,
+  Legend,
 } from "recharts";
 import { useTheme } from "@/contexts/ThemeContext";
-import { CHART_NEUTRALS } from "@/lib/chartPalette";
+import { CHART_NEUTRALS, categoricalPalette } from "@/lib/chartPalette";
 import { loadVendasData } from "@/lib/vendas/fetch";
 import {
   agendaStatus,
@@ -24,6 +41,7 @@ import {
   institutionBreakdown,
   institutionLabelOf,
   isUnmatchedRow,
+  monthKey,
   monthlySeries,
   productBreakdown,
   titleCase,
@@ -56,6 +74,9 @@ export default function Vendas() {
   const [alunosStatus, setAlunosStatus] = useState<AlunosStatus>("");
   const [alunosFilter, setAlunosFilter] = useState("");
   const [unmatchedFilter, setUnmatchedFilter] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     loadVendasData()
@@ -86,6 +107,176 @@ export default function Vendas() {
   const estudios = useMemo(() => estudioBreakdown(salesOnly).slice(0, 8), [salesOnly]);
   const instituicoes = useMemo(() => institutionBreakdown(salesOnly), [salesOnly]);
   const produtos = useMemo(() => productBreakdown(salesOnly), [salesOnly]);
+  const palette = useMemo(() => categoricalPalette(theme), [theme]);
+
+  const topVendedor = vendedores[0] || null;
+  const bottomVendedor = useMemo(() => {
+    const comVenda = vendedores.filter((v) => v.revenue > 0);
+    return comVenda.length > 1 ? comVenda[comVenda.length - 1] : null;
+  }, [vendedores]);
+
+  // projeção simples de faturamento (regressão linear sobre os últimos meses
+  // com venda) — dá previsibilidade sem depender de uma API externa
+  const projection = useMemo(() => {
+    const withData = monthly.filter((m) => m.revenue > 0);
+    if (withData.length < 2) return null;
+    const pts = withData.slice(-6);
+    const n = pts.length;
+    const xMean = (n - 1) / 2;
+    const yMean = pts.reduce((s, m) => s + m.revenue, 0) / n;
+    let num = 0,
+      den = 0;
+    pts.forEach((m, i) => {
+      num += (i - xMean) * (m.revenue - yMean);
+      den += (i - xMean) ** 2;
+    });
+    const slope = den ? num / den : 0;
+    const intercept = yMean - slope * xMean;
+    const next = Math.max(0, intercept + slope * n);
+    const trendPct = yMean ? (slope / yMean) * 100 : 0;
+    return { next, trendPct, basedOn: n };
+  }, [monthly]);
+
+  // detalhamento por produto (usado no gráfico de pizza clicável)
+  const productDetails = useMemo(() => {
+    const map: Record<
+      string,
+      { revenue: number; units: number; vendedores: Record<string, number>; clientes: Record<string, number> }
+    > = {};
+    salesOnly.forEach((r) => {
+      const pk = r.descricao?.trim() ? titleCase(r.descricao) : "Não informado";
+      if (!map[pk]) map[pk] = { revenue: 0, units: 0, vendedores: {}, clientes: {} };
+      map[pk].revenue += r.total;
+      map[pk].units += 1;
+      const vk = vendedorLabel(r);
+      map[pk].vendedores[vk] = (map[pk].vendedores[vk] || 0) + r.total;
+      const ck = titleCase(r.cliente);
+      map[pk].clientes[ck] = (map[pk].clientes[ck] || 0) + r.total;
+    });
+    return map;
+  }, [salesOnly]);
+
+  const selectedProductDetail = useMemo(() => {
+    if (!selectedProduct) return null;
+    const d = productDetails[selectedProduct];
+    if (!d) return null;
+    return {
+      label: selectedProduct,
+      revenue: d.revenue,
+      units: d.units,
+      ticket: d.units ? d.revenue / d.units : 0,
+      topVendedores: Object.entries(d.vendedores).sort((a, b) => b[1] - a[1]).slice(0, 5),
+      topClientes: Object.entries(d.clientes).sort((a, b) => b[1] - a[1]).slice(0, 5),
+    };
+  }, [selectedProduct, productDetails]);
+
+  // detalhamento por mês (mesmo esquema do produto, aplicado ao gráfico mensal)
+  const monthDetails = useMemo(() => {
+    const map: Record<
+      string,
+      { revenue: number; items: number; vendedores: Record<string, number>; produtos: Record<string, number> }
+    > = {};
+    salesOnly.forEach((r) => {
+      const mk = monthKey(r.dataVenda);
+      if (!mk) return;
+      if (!map[mk]) map[mk] = { revenue: 0, items: 0, vendedores: {}, produtos: {} };
+      map[mk].revenue += r.total;
+      map[mk].items += 1;
+      const vk = vendedorLabel(r);
+      map[mk].vendedores[vk] = (map[mk].vendedores[vk] || 0) + r.total;
+      const pk = r.descricao?.trim() ? titleCase(r.descricao) : "Não informado";
+      map[mk].produtos[pk] = (map[mk].produtos[pk] || 0) + r.total;
+    });
+    return map;
+  }, [salesOnly]);
+
+  const selectedMonthDetail = useMemo(() => {
+    if (!selectedMonth) return null;
+    const d = monthDetails[selectedMonth];
+    const label = monthly.find((m) => m.key === selectedMonth)?.label || selectedMonth;
+    if (!d) return { label, revenue: 0, items: 0, topVendedores: [] as [string, number][], topProdutos: [] as [string, number][] };
+    return {
+      label,
+      revenue: d.revenue,
+      items: d.items,
+      topVendedores: Object.entries(d.vendedores).sort((a, b) => b[1] - a[1]).slice(0, 5),
+      topProdutos: Object.entries(d.produtos).sort((a, b) => b[1] - a[1]).slice(0, 5),
+    };
+  }, [selectedMonth, monthDetails, monthly]);
+
+  function exportExcel() {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet([
+        ["Indicador", "Valor"],
+        ["Faturamento total", kpis.totalRevenue],
+        ["Itens vendidos", kpis.itemCount],
+        ["Ticket médio", kpis.ticketMedio],
+        ["Clientes únicos", kpis.clientCount],
+        ["Cruzamento c/ agenda (%)", Number(kpis.convRate.toFixed(1))],
+      ]),
+      "Resumo"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet([["Mês", "Faturamento", "Itens"], ...monthly.map((m) => [m.label, m.revenue, m.items])]),
+      "Mensal"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet([
+        ["Vendedor", "Faturamento", "Itens", "Conversão (%)"],
+        ...vendedores.map((v) => [v.label, v.revenue, v.items, Number(v.conv.toFixed(1))]),
+      ]),
+      "Vendedores"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet([["Produto", "Faturamento"], ...produtos.map((p) => [p.label, p.value])]),
+      "Produtos"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet([
+        ["Data", "Vendedor", "Cliente", "Estúdio", "Produto", "Total"],
+        ...salesOnly.map((r) => [
+          r.dataVenda,
+          vendedorLabel(r),
+          titleCase(r.cliente),
+          titleCase(r.estudio),
+          titleCase(r.descricao),
+          r.total,
+        ]),
+      ]),
+      "Vendas"
+    );
+    const suffix = filters.year ? `_${filters.year}${filters.month ? "-" + filters.month : ""}` : "";
+    XLSX.writeFile(wb, `relatorio-vendas${suffix}.xlsx`);
+  }
+
+  function exportCSV() {
+    const header = ["Data", "Vendedor", "Cliente", "Estúdio", "Produto", "Total"];
+    const lines = [header.join(";")].concat(
+      salesOnly.map((r) =>
+        [
+          r.dataVenda,
+          vendedorLabel(r),
+          titleCase(r.cliente),
+          titleCase(r.estudio),
+          titleCase(r.descricao),
+          r.total.toFixed(2).replace(".", ","),
+        ].join(";")
+      )
+    );
+    const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vendas${filters.year ? "_" + filters.year : ""}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const unmatched = useMemo(() => {
     const base = salesOnly.filter(isUnmatchedRow);
@@ -177,12 +368,46 @@ export default function Vendas() {
 
   return (
     <Layout>
-      <header className="mb-4 flex items-center justify-between">
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Painel de Vendas</h1>
           <p className="text-sm text-ink-400">
             {fmtInt(salesOnly.length)} de {fmtInt(rows.filter((r) => r.descricao !== "NAO COMPROU").length)} vendas
           </p>
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => setExportOpen((v) => !v)}
+            className="flex items-center gap-2 rounded-md border border-ink-700 bg-ink-850 px-3 py-1.5 text-sm text-ink-200 transition hover:border-brand-600 hover:text-brand-300"
+          >
+            <Download size={15} strokeWidth={1.75} />
+            Exportar relatório
+          </button>
+          {exportOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+              <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-md border border-ink-700 bg-ink-850 shadow-xl">
+                <button
+                  onClick={() => {
+                    exportExcel();
+                    setExportOpen(false);
+                  }}
+                  className="block w-full px-3 py-2 text-left text-sm text-ink-200 hover:bg-ink-800"
+                >
+                  Excel (.xlsx)
+                </button>
+                <button
+                  onClick={() => {
+                    exportCSV();
+                    setExportOpen(false);
+                  }}
+                  className="block w-full px-3 py-2 text-left text-sm text-ink-200 hover:bg-ink-800"
+                >
+                  CSV (.csv)
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </header>
 
@@ -263,11 +488,65 @@ export default function Vendas() {
         <Kpi label="Cruzamento c/ agenda" value={fmtPct(kpis.convRate)} icon={CalendarCheck2} tone="emerald" />
       </div>
 
+      {/* central de planejamento — previsibilidade e destaques de vendedores */}
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-ink-800 bg-ink-850 p-3.5">
+          <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-ink-400">
+            <Sparkles size={14} className="text-brand-400" /> Projeção próximo mês
+          </div>
+          {projection ? (
+            <>
+              <p className="text-lg font-semibold tabular-nums">{fmtBRL(projection.next)}</p>
+              <p
+                className={`mt-1 flex items-center gap-1 text-xs ${
+                  projection.trendPct >= 0 ? "text-emerald-400" : "text-amber-400"
+                }`}
+              >
+                {projection.trendPct >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                Tendência de {fmtPct(Math.abs(projection.trendPct))} ao mês (últimos {projection.basedOn} meses)
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-ink-400">Dados insuficientes para projetar.</p>
+          )}
+        </div>
+        <div className="rounded-xl border border-ink-800 bg-ink-850 p-3.5">
+          <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-ink-400">
+            <Trophy size={14} className="text-emerald-400" /> Vendedor destaque
+          </div>
+          {topVendedor ? (
+            <>
+              <p className="truncate text-lg font-semibold">{topVendedor.label}</p>
+              <p className="mt-1 text-xs text-ink-400">
+                {fmtBRL(topVendedor.revenue)} · {fmtInt(topVendedor.items)} itens
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-ink-400">Sem dados no período.</p>
+          )}
+        </div>
+        <div className="rounded-xl border border-ink-800 bg-ink-850 p-3.5">
+          <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-ink-400">
+            <TrendingDown size={14} className="text-amber-400" /> Menor volume
+          </div>
+          {bottomVendedor ? (
+            <>
+              <p className="truncate text-lg font-semibold">{bottomVendedor.label}</p>
+              <p className="mt-1 text-xs text-ink-400">
+                {fmtBRL(bottomVendedor.revenue)} · {fmtInt(bottomVendedor.items)} itens
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-ink-400">Sem dados no período.</p>
+          )}
+        </div>
+      </div>
+
       {/* faturamento mensal */}
       <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-medium text-ink-100">Faturamento por mês</p>
-          <p className="text-xs text-ink-400">Clique numa barra pra filtrar o mês</p>
+          <p className="text-xs text-ink-400">Clique numa barra pra filtrar e ver o detalhamento</p>
         </div>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={monthly}>
@@ -286,12 +565,16 @@ export default function Vendas() {
             <YAxis stroke={neutros.axis} fontSize={12} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
             <Tooltip
               cursor={false}
-              formatter={(v: number) => fmtBRL(v)}
+              labelFormatter={(label: string) => `Mês de ${label}`}
+              formatter={(v: number) => [fmtBRL(v), "Faturamento"]}
+              labelStyle={{ color: neutros.tooltipText, fontWeight: 600, marginBottom: 4 }}
+              itemStyle={{ color: neutros.tooltipText }}
               contentStyle={{
                 background: neutros.tooltipBg,
                 border: `1px solid ${neutros.grid}`,
                 borderRadius: 8,
                 color: neutros.tooltipText,
+                padding: "8px 12px",
               }}
             />
             <Bar
@@ -304,6 +587,7 @@ export default function Vendas() {
               onClick={(d: { key: string }) => {
                 const month = d.key.split("-")[1];
                 setFilters((f) => ({ ...f, month: f.month === month ? undefined : month }));
+                setSelectedMonth((m) => (m === d.key ? null : d.key));
               }}
             >
               {monthly.map((m) => {
@@ -365,7 +649,60 @@ export default function Vendas() {
 
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <BarListCard title="Faturamento por instituição" items={instituicoes} />
-        <BarListCard title="Faturamento por produto" items={produtos} />
+
+        <div className="rounded-lg border border-ink-800 bg-ink-850 p-3">
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-sm font-medium text-ink-100">Faturamento por produto</p>
+            <p className="text-xs text-ink-400">Clique numa fatia pra ver detalhes</p>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart>
+              <Pie
+                data={produtos}
+                dataKey="value"
+                nameKey="label"
+                cx="50%"
+                cy="46%"
+                innerRadius={56}
+                outerRadius={92}
+                paddingAngle={2}
+                isAnimationActive
+                animationDuration={700}
+                onClick={(d: { label?: string }) => {
+                  if (!d.label || d.label === "Outros") return;
+                  setSelectedProduct((p) => (p === d.label ? null : d.label!));
+                }}
+              >
+                {produtos.map((p, i) => (
+                  <Cell
+                    key={p.label}
+                    fill={palette[i % palette.length]}
+                    stroke={neutros.tooltipBg}
+                    strokeWidth={2}
+                    opacity={p.label === "Outros" ? 0.55 : 1}
+                    cursor={p.label === "Outros" ? "default" : "pointer"}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(v: number, _n: string, entry: { payload?: { label?: string } }) => [
+                  fmtBRL(v),
+                  entry?.payload?.label || "",
+                ]}
+                labelFormatter={() => ""}
+                itemStyle={{ color: neutros.tooltipText }}
+                contentStyle={{
+                  background: neutros.tooltipBg,
+                  border: `1px solid ${neutros.grid}`,
+                  borderRadius: 8,
+                  color: neutros.tooltipText,
+                  padding: "8px 12px",
+                }}
+              />
+              <Legend verticalAlign="bottom" height={44} wrapperStyle={{ fontSize: 12, color: neutros.axis }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* alunos: comprou/não comprou, agendado/não agendado */}
@@ -487,6 +824,33 @@ export default function Vendas() {
           </table>
         </div>
       </div>
+
+      {selectedProductDetail && (
+        <DetailModal title={selectedProductDetail.label} onClose={() => setSelectedProduct(null)}>
+          <div className="mb-4 grid grid-cols-3 gap-3">
+            <MiniStat label="Faturamento" value={fmtBRL(selectedProductDetail.revenue)} />
+            <MiniStat label="Unidades" value={fmtInt(selectedProductDetail.units)} />
+            <MiniStat label="Ticket médio" value={fmtBRL(selectedProductDetail.ticket)} />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TopList title="Top vendedores" entries={selectedProductDetail.topVendedores} />
+            <TopList title="Top clientes" entries={selectedProductDetail.topClientes} />
+          </div>
+        </DetailModal>
+      )}
+
+      {selectedMonthDetail && (
+        <DetailModal title={`Detalhamento — ${selectedMonthDetail.label}`} onClose={() => setSelectedMonth(null)}>
+          <div className="mb-4 grid grid-cols-2 gap-3">
+            <MiniStat label="Faturamento" value={fmtBRL(selectedMonthDetail.revenue)} />
+            <MiniStat label="Itens vendidos" value={fmtInt(selectedMonthDetail.items)} />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TopList title="Top vendedores" entries={selectedMonthDetail.topVendedores} />
+            <TopList title="Top produtos" entries={selectedMonthDetail.topProdutos} />
+          </div>
+        </DetailModal>
+      )}
     </Layout>
   );
 }
@@ -605,5 +969,72 @@ function Badge({ good, children }: { good: boolean; children: React.ReactNode })
     >
       {children}
     </span>
+  );
+}
+
+// painel de detalhamento — mesmo esquema (clicar num elemento do gráfico
+// abre um resumo) usado tanto pro gráfico de produtos quanto pro mensal
+function DetailModal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[85vh] w-full max-w-2xl overflow-auto rounded-xl border border-ink-700 bg-ink-850 p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <p className="text-base font-semibold text-ink-50">{title}</p>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-ink-400 transition hover:bg-ink-800 hover:text-ink-100"
+            aria-label="Fechar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-ink-800 bg-ink-900/60 p-3">
+      <p className="text-xs uppercase tracking-wide text-ink-400">{label}</p>
+      <p className="mt-1 text-base font-semibold tabular-nums text-ink-50">{value}</p>
+    </div>
+  );
+}
+
+function TopList({ title, entries }: { title: string; entries: [string, number][] }) {
+  return (
+    <div className="rounded-lg border border-ink-800 bg-ink-900/60 p-3">
+      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-400">{title}</p>
+      {entries.length ? (
+        <ul className="space-y-1.5 text-sm">
+          {entries.map(([label, value]) => (
+            <li key={label} className="flex items-center justify-between gap-2">
+              <span className="truncate text-ink-200">{label}</span>
+              <span className="shrink-0 tabular-nums text-ink-400">
+                {value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-ink-500">Sem dados.</p>
+      )}
+    </div>
   );
 }
