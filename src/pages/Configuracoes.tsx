@@ -107,6 +107,7 @@ function AparenciaTab() {
   } = useTheme();
   const { session } = useAuth();
   const [testando, setTestando] = useState<Periodo | null>(null);
+  const [testandoVoz, setTestandoVoz] = useState(false);
   const [vozes, setVozes] = useState<SpeechSynthesisVoice[]>([]);
   const nomePadrao = primeiroNome(session) ?? "";
   const nomeAtual = primeiroNome(session, apelido);
@@ -296,22 +297,37 @@ function AparenciaTab() {
 
             <div className="space-y-1">
               <label className="block text-xs text-ink-400">Voz</label>
-              <select
-                value={saudacaoVozId}
-                onChange={(e) => setSaudacaoVozId(e.target.value)}
-                className="w-full max-w-sm rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1.5 text-sm text-ink-50"
-              >
-                <option value="">Automática (melhor voz em pt-BR disponível)</option>
-                {vozes.map((v) => (
-                  <option key={idDaVoz(v)} value={idDaVoz(v)}>
-                    {v.name} — {v.lang}
-                    {v.localService ? "" : " (online)"}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  value={saudacaoVozId}
+                  onChange={(e) => setSaudacaoVozId(e.target.value)}
+                  className="w-full max-w-sm rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1.5 text-sm text-ink-50"
+                >
+                  <option value="">Automática (melhor voz em pt-BR disponível)</option>
+                  {vozes.map((v) => (
+                    <option key={idDaVoz(v)} value={idDaVoz(v)}>
+                      {v.name} — {v.lang}
+                      {v.localService ? "" : " (online)"}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={testandoVoz}
+                  onClick={async () => {
+                    setTestandoVoz(true);
+                    await falarSaudacao(null, "Olá! Essa é a voz que vai te dar bom dia por aqui.", saudacaoVozId);
+                    setTestandoVoz(false);
+                  }}
+                  title="Ouvir só a voz escolhida, com uma frase de exemplo"
+                  className="shrink-0 rounded-md border border-ink-600 px-3 py-1.5 text-xs text-ink-200 transition hover:border-ink-500 disabled:opacity-50"
+                >
+                  {testandoVoz ? "Falando…" : "Testar voz"}
+                </button>
+              </div>
               <p className="text-[11px] text-ink-500">
                 {vozes.length > 0
-                  ? `${vozes.length} voz(es) disponível(is) neste navegador. A lista varia por computador/sistema.`
+                  ? `${vozes.length} voz(es) disponível(is) neste navegador. A lista varia por computador/sistema. Troque a voz aqui em cima e clique "Testar voz" pra ouvir cada uma antes de escolher.`
                   : "Carregando vozes do navegador… se não aparecer nenhuma, esse navegador não expõe vozes em português."}
               </p>
             </div>
