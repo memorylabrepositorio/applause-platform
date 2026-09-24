@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { cached, invalidateCache } from "@/lib/cache";
 import { buildAlunos, type AgendaRow, type ClienteRow, type ContratoRow, type Nota, type Tarefa } from "./engine";
 
 export interface AtendimentoData {
@@ -9,7 +10,7 @@ export interface AtendimentoData {
   tarefas: Tarefa[];
 }
 
-export async function loadAtendimentoData(): Promise<AtendimentoData> {
+async function loadAtendimentoDataUncached(): Promise<AtendimentoData> {
   const [contratos, clientes, agenda, notas, tarefas] = await Promise.all([
     fetchAllRows<ContratoRow>("contratos", "nro_controle,instituicao,curso,ano_periodo"),
     fetchAllRows<ClienteRow>("clientes", "codigo,nome_cliente,cpf,telefone,nro_controle,status,tipo"),
@@ -19,6 +20,10 @@ export async function loadAtendimentoData(): Promise<AtendimentoData> {
   ]);
   const { alunos, agendamentosOrfaos } = buildAlunos(clientes, contratos, agenda, tarefas);
   return { alunos, agendamentosOrfaos, notas, tarefas };
+}
+
+export function loadAtendimentoData(): Promise<AtendimentoData> {
+  return cached("atendimento", loadAtendimentoDataUncached);
 }
 
 export async function getCurrentUserEmail(): Promise<string> {
@@ -32,12 +37,14 @@ export async function concluirTarefa(id: number): Promise<void> {
     .update({ status: "concluida", concluido_em: new Date().toISOString() })
     .eq("id", id);
   if (error) throw error;
+  invalidateCache("atendimento");
 }
 
 export async function criarTarefa(clienteCodigo: number, motivo: string, prazo: string | null): Promise<Tarefa> {
   const payload = { cliente_codigo: clienteCodigo, motivo, prazo, status: "pendente" };
   const { data, error } = await supabase.from("atendimento_tarefas").insert(payload).select();
   if (error || !data || !data.length) throw error || new Error("Erro desconhecido ao criar tarefa");
+  invalidateCache("atendimento");
   return data[0] as Tarefa;
 }
 
@@ -50,5 +57,6 @@ export async function criarNota(
   const payload = { cliente_codigo: clienteCodigo, tipo, texto, autor };
   const { data, error } = await supabase.from("atendimento_notas").insert(payload).select();
   if (error || !data || !data.length) throw error || new Error("Erro desconhecido ao salvar anotação");
+  invalidateCache("atendimento");
   return data[0] as Nota;
 }

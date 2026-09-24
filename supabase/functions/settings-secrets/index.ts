@@ -10,7 +10,7 @@
 // aparece na URL do projeto (Project Settings > General).
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 
-const SECRETS_GERENCIADOS = ["EVOLUTION_API_KEY", "META_ACCESS_TOKEN"];
+const SECRETS_GERENCIADOS = ["EVOLUTION_API_KEY", "META_ACCESS_TOKEN", "ASAAS_API_KEY", "ASAAS_WEBHOOK_TOKEN"];
 
 async function requireUser(req: Request) {
   const authHeader = req.headers.get("Authorization");

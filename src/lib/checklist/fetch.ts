@@ -1,8 +1,9 @@
 import { supabase } from "@/lib/supabase";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { cached, invalidateCache } from "@/lib/cache";
 import type { ChecklistEvento, ContratoRow } from "./engine";
 
-export async function loadEventos(): Promise<ChecklistEvento[]> {
+async function loadEventosUncached(): Promise<ChecklistEvento[]> {
   const { data, error } = await supabase
     .from("checklist_eventos")
     .select("*")
@@ -11,10 +12,13 @@ export async function loadEventos(): Promise<ChecklistEvento[]> {
   return (data || []) as ChecklistEvento[];
 }
 
-export async function loadContratos(): Promise<ContratoRow[]> {
-  return fetchAllRows<ContratoRow>(
-    "contratos",
-    "nro_controle,instituicao,curso,ano_periodo,status,qtde_clientes"
+export function loadEventos(): Promise<ChecklistEvento[]> {
+  return cached("checklist-eventos", loadEventosUncached);
+}
+
+export function loadContratos(): Promise<ContratoRow[]> {
+  return cached("checklist-contratos", () =>
+    fetchAllRows<ContratoRow>("contratos", "nro_controle,instituicao,curso,ano_periodo,status,qtde_clientes")
   );
 }
 
@@ -29,15 +33,18 @@ export async function createChecklistFromContrato(contrato: ContratoRow): Promis
   if (error || !data || !data.length) {
     throw error || new Error("Erro desconhecido ao criar checklist");
   }
+  invalidateCache("checklist-eventos");
   return data[0] as ChecklistEvento;
 }
 
 export async function updateChecklist(id: number, payload: Record<string, unknown>): Promise<void> {
   const { error } = await supabase.from("checklist_eventos").update(payload).eq("id", id);
   if (error) throw error;
+  invalidateCache("checklist-eventos");
 }
 
 export async function deleteChecklist(id: number): Promise<void> {
   const { error } = await supabase.from("checklist_eventos").delete().eq("id", id);
   if (error) throw error;
+  invalidateCache("checklist-eventos");
 }

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Palette, Bot } from "lucide-react";
+import { Palette, Bot, Receipt } from "lucide-react";
 import Layout from "@/components/Layout";
 import { loadSdrConfig, saveSdrConfig } from "@/lib/sdr/fetch";
 import type { SdrCanal, SdrConfig } from "@/lib/sdr/engine";
-import { getSecretsStatus, saveSecret, type SecretsStatus } from "@/lib/settings/fetch";
+import { getSecretsStatus, saveSecret, type SecretName, type SecretsStatus } from "@/lib/settings/fetch";
+import { loadFinanceiroConfig, saveFinanceiroConfig, testarConexaoAsaas } from "@/lib/financeiro/fetch";
+import type { FinanceiroConfig } from "@/lib/financeiro/fetch";
 import { useTheme, type Accent, type FontSize, type Density, type ThemePreference } from "@/contexts/ThemeContext";
 
 const NAV_ITEMS = [
@@ -19,17 +21,19 @@ const NAV_ITEMS = [
   { to: "/lucro", label: "Lucro por contrato" },
 ];
 
-type Tab = "aparencia" | "agente";
+type Tab = "aparencia" | "agente" | "cobrancas";
 
 export default function Configuracoes() {
   const location = useLocation();
-  const [tab, setTab] = useState<Tab>(location.hash === "#agente" ? "agente" : "aparencia");
+  const [tab, setTab] = useState<Tab>(
+    location.hash === "#agente" ? "agente" : location.hash === "#cobrancas" ? "cobrancas" : "aparencia"
+  );
 
   return (
     <Layout>
       <header className="mb-4">
         <h1 className="text-xl font-semibold">Configurações</h1>
-        <p className="text-sm text-ink-400">Aparência da plataforma e comportamento do agente de SDR</p>
+        <p className="text-sm text-ink-400">Aparência da plataforma, agente de SDR e cobrança automática</p>
       </header>
 
       <div className="mb-4 flex gap-2 border-b border-ink-800">
@@ -39,9 +43,12 @@ export default function Configuracoes() {
         <TabButton active={tab === "agente"} onClick={() => setTab("agente")} icon={Bot}>
           Agente de IA (SDR)
         </TabButton>
+        <TabButton active={tab === "cobrancas"} onClick={() => setTab("cobrancas")} icon={Receipt}>
+          Cobranças (Asaas)
+        </TabButton>
       </div>
 
-      {tab === "aparencia" ? <AparenciaTab /> : <AgenteTab />}
+      {tab === "aparencia" ? <AparenciaTab /> : tab === "agente" ? <AgenteTab /> : <CobrancasTab />}
     </Layout>
   );
 }
@@ -372,6 +379,251 @@ function AgenteTab() {
   );
 }
 
+// ---------------------------------------------------------------------
+// Cobranças (Asaas) — ambiente, chave da API, token do webhook e teste de
+// conexão. Gera a cobrança de PIX/boleto direto de uma parcela em
+// Financeiro; aqui só fica a configuração da integração.
+// ---------------------------------------------------------------------
+function CobrancasTab() {
+  const [config, setConfig] = useState<FinanceiroConfig | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [secretsStatus, setSecretsStatus] = useState<SecretsStatus | null>(null);
+  const [secretsError, setSecretsError] = useState<string | null>(null);
+  const [testando, setTestando] = useState(false);
+  const [testeMsg, setTesteMsg] = useState<{ ok: boolean; texto: string } | null>(null);
+
+  const webhookUrl = (() => {
+    try {
+      const base = (import.meta.env.VITE_SUPABASE_URL as string) || "";
+      return base ? `${base}/functions/v1/fin-asaas-webhook` : "";
+    } catch {
+      return "";
+    }
+  })();
+
+  async function refresh() {
+    try {
+      setConfig(await loadFinanceiroConfig());
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Falha ao carregar configuração");
+    }
+    const { status, error: err } = await getSecretsStatus();
+    if (status) setSecretsStatus(status);
+    if (err) setSecretsError(err);
+  }
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  async function patch(p: Partial<FinanceiroConfig>) {
+    if (!config) return;
+    setConfig({ ...config, ...p });
+    try {
+      await saveFinanceiroConfig(p);
+    } catch (e: unknown) {
+      alert("Não foi possível salvar: " + (e instanceof Error ? e.message : "erro desconhecido"));
+    }
+  }
+
+  async function handleTestar() {
+    setTestando(true);
+    setTesteMsg(null);
+    const r = await testarConexaoAsaas();
+    setTesteMsg(
+      r.ok
+        ? { ok: true, texto: `Conectado ✓ (saldo atual: ${r.balance?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) ?? "—"})` }
+        : { ok: false, texto: r.error || "Falha ao testar conexão" }
+    );
+    setTestando(false);
+  }
+
+  function gerarToken() {
+    const token = crypto.randomUUID().replace(/-/g, "");
+    navigator.clipboard.writeText(token).catch(() => {});
+    return token;
+  }
+
+  if (error) {
+    return <p className="text-red-400">Não foi possível carregar: {error}</p>;
+  }
+
+  if (!config) {
+    return <p className="text-ink-400">Carregando configurações…</p>;
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <section className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+        <p className="mb-1 text-sm font-medium text-ink-100">Sobre a cobrança automática</p>
+        <p className="text-xs text-ink-400">
+          Com isso ativo, o Financeiro pode gerar um link de PIX ou boleto direto de uma parcela em aberto — quando o
+          aluno pagar, o status é atualizado sozinho, sem precisar marcar "pago" na mão.
+        </p>
+      </section>
+
+      <section className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+        <p className="mb-1 text-sm font-medium text-ink-100">Ambiente</p>
+        <p className="mb-3 text-xs text-ink-400">
+          Use "Sandbox" pra testar sem gerar cobrança real. Troque pra "Produção" só quando já tiver uma conta Asaas
+          verificada.
+        </p>
+        <div className="flex gap-2">
+          {(["sandbox", "producao"] as const).map((a) => (
+            <button
+              key={a}
+              onClick={() => patch({ asaas_ambiente: a })}
+              className={`rounded-md border px-3.5 py-1.5 text-sm transition ${
+                config.asaas_ambiente === a
+                  ? "border-brand-600 bg-brand-950 text-brand-300"
+                  : "border-ink-600 text-ink-300 hover:text-ink-50"
+              }`}
+            >
+              {a === "sandbox" ? "Sandbox (teste)" : "Produção"}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+        <p className="mb-1 text-sm font-medium text-ink-100">Chave da API</p>
+        <p className="mb-2 text-xs text-ink-400">
+          Encontrada em Asaas → Integrações → API. Use a chave do mesmo ambiente escolhido acima.
+        </p>
+        <SecretField
+          label="Chave da API (Access Token)"
+          secretName="ASAAS_API_KEY"
+          configurado={secretsStatus?.ASAAS_API_KEY}
+          erro={secretsError}
+          onSaved={refresh}
+        />
+        <div className="mt-3 flex items-center gap-3 border-t border-ink-800 pt-3">
+          <button
+            onClick={handleTestar}
+            disabled={testando}
+            className="rounded-md border border-ink-600 px-2.5 py-1 text-xs text-ink-200 hover:border-ink-500 disabled:opacity-50"
+          >
+            {testando ? "Testando…" : "Testar conexão"}
+          </button>
+          {testeMsg && (
+            <p className={`text-xs ${testeMsg.ok ? "text-emerald-400" : "text-red-400"}`}>{testeMsg.texto}</p>
+          )}
+        </div>
+      </section>
+
+      <section className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+        <p className="mb-1 text-sm font-medium text-ink-100">Webhook (atualização automática de status)</p>
+        <p className="mb-2 text-xs text-ink-400">
+          Cole essa URL em Asaas → Integrações → Webhooks, marcando os eventos de pagamento. O token abaixo vai no
+          campo "Token de autenticação" da mesma tela — os dois lados precisam ter o mesmo valor.
+        </p>
+        <div className="mb-3">
+          <label className="mb-1 block text-xs text-ink-400">URL do webhook</label>
+          <div className="flex gap-2">
+            <input
+              readOnly
+              value={webhookUrl || "defina VITE_SUPABASE_URL pra ver a URL"}
+              className="min-w-0 flex-1 rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm text-ink-300"
+            />
+            <button
+              onClick={() => webhookUrl && navigator.clipboard.writeText(webhookUrl)}
+              className="rounded-md border border-ink-600 px-2.5 py-1 text-xs text-ink-200 hover:border-ink-500"
+            >
+              Copiar
+            </button>
+          </div>
+        </div>
+        <SecretFieldComToken
+          configurado={secretsStatus?.ASAAS_WEBHOOK_TOKEN}
+          erro={secretsError}
+          onSaved={refresh}
+          gerarToken={gerarToken}
+        />
+      </section>
+    </div>
+  );
+}
+
+// campo de token com botão "gerar" — cria um valor aleatório, copia pra área
+// de transferência (pra colar no Asaas) e já deixa preenchido pra salvar
+function SecretFieldComToken({
+  configurado,
+  erro,
+  onSaved,
+  gerarToken,
+}: {
+  configurado?: boolean;
+  erro?: string | null;
+  onSaved: () => void;
+  gerarToken: () => string;
+}) {
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function handleSave(v: string) {
+    if (!v.trim()) return;
+    setSaving(true);
+    setMsg("");
+    try {
+      await saveSecret("ASAAS_WEBHOOK_TOKEN", v.trim());
+      setValue("");
+      setMsg("Salvo com segurança ✓ — copiado pra área de transferência, cole no Asaas");
+      onSaved();
+    } catch (e: unknown) {
+      setMsg("Erro: " + (e instanceof Error ? e.message : "erro desconhecido"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-2 border-t border-ink-800 pt-3">
+      <div className="mb-1 flex items-center gap-2">
+        <label className="text-xs text-ink-400">Token do webhook</label>
+        {configurado === true && (
+          <span className="rounded-full border border-emerald-800 bg-emerald-950 px-2 py-0.5 text-xs text-emerald-300">
+            configurado ✓
+          </span>
+        )}
+        {configurado === false && (
+          <span className="rounded-full border border-ink-600 px-2 py-0.5 text-xs text-ink-400">
+            não configurado
+          </span>
+        )}
+      </div>
+      {erro && (
+        <p className="mb-2 max-w-xl text-xs text-amber-400">
+          Não consegui checar o status ({erro}) — você ainda pode gerar e salvar o token abaixo.
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={configurado ? "•••••••• (deixe em branco pra manter o atual)" : "Clique em Gerar →"}
+          className="min-w-0 flex-1 rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 font-mono text-sm"
+        />
+        <button
+          onClick={() => setValue(gerarToken())}
+          className="rounded-md border border-ink-600 px-2.5 py-1 text-sm text-ink-200 hover:border-ink-500"
+        >
+          Gerar
+        </button>
+        <button
+          onClick={() => handleSave(value)}
+          disabled={saving || !value.trim()}
+          className="rounded-md bg-brand-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
+        >
+          Salvar
+        </button>
+      </div>
+      {msg && <p className="mt-1 text-xs text-ink-400">{msg}</p>}
+    </div>
+  );
+}
+
 function IntegracaoCard({
   titulo,
   ativo,
@@ -409,7 +661,7 @@ function SecretField({
   onSaved,
 }: {
   label: string;
-  secretName: "EVOLUTION_API_KEY" | "META_ACCESS_TOKEN";
+  secretName: SecretName;
   configurado?: boolean;
   erro?: string | null;
   onSaved: () => void;

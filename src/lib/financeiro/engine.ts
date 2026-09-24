@@ -3,6 +3,7 @@
 export type FormaPagamento = "pix" | "boleto" | "cartao" | "dinheiro" | "outro";
 export type OrigemLancamento = "manual" | "pronet";
 export type StatusParcela = "pago" | "vencido" | "em_dia";
+export type AsaasBillingType = "PIX" | "BOLETO";
 
 export interface Parcela {
   id: number;
@@ -20,7 +21,25 @@ export interface Parcela {
   observacoes: string | null;
   origem: OrigemLancamento;
   criado_em?: string;
+  // cobrança automática via Asaas (boleto/PIX) — null enquanto não gerada
+  asaas_charge_id?: string | null;
+  asaas_payment_url?: string | null;
+  asaas_billing_type?: AsaasBillingType | null;
+  asaas_status?: string | null;
 }
+
+// status que o Asaas devolve — mapeados pra um rótulo em pt-BR
+export const ASAAS_STATUS_LABEL: Record<string, string> = {
+  PENDING: "Aguardando pagamento",
+  RECEIVED: "Recebido",
+  CONFIRMED: "Confirmado",
+  OVERDUE: "Vencido no Asaas",
+  REFUNDED: "Estornado",
+  RECEIVED_IN_CASH: "Recebido em dinheiro",
+  REFUND_REQUESTED: "Estorno solicitado",
+  CHARGEBACK_REQUESTED: "Chargeback solicitado",
+  DELETED: "Cancelado",
+};
 
 export interface ClienteRef {
   codigo: number;

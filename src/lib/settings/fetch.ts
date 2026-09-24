@@ -1,8 +1,12 @@
 import { supabase } from "@/lib/supabase";
 
+export type SecretName = "EVOLUTION_API_KEY" | "META_ACCESS_TOKEN" | "ASAAS_API_KEY" | "ASAAS_WEBHOOK_TOKEN";
+
 export interface SecretsStatus {
   EVOLUTION_API_KEY: boolean;
   META_ACCESS_TOKEN: boolean;
+  ASAAS_API_KEY: boolean;
+  ASAAS_WEBHOOK_TOKEN: boolean;
 }
 
 export async function getSecretsStatus(): Promise<{ status?: SecretsStatus; error?: string }> {
@@ -12,7 +16,7 @@ export async function getSecretsStatus(): Promise<{ status?: SecretsStatus; erro
   return { status: data?.status as SecretsStatus };
 }
 
-export async function saveSecret(name: "EVOLUTION_API_KEY" | "META_ACCESS_TOKEN", value: string): Promise<void> {
+export async function saveSecret(name: SecretName, value: string): Promise<void> {
   const { data, error } = await supabase.functions.invoke("settings-secrets", {
     method: "POST",
     body: { name, value },

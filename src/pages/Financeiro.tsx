@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Copy, ExternalLink, QrCode, Receipt } from "lucide-react";
 import Layout from "@/components/Layout";
 import {
   atualizarParcela,
   criarParcela,
   desmarcarPaga,
   excluirParcela,
+  gerarCobrancaAsaas,
   loadFinanceiroData,
   marcarComoPaga,
 } from "@/lib/financeiro/fetch";
 import {
+  ASAAS_STATUS_LABEL,
   EMPTY_FILTERS,
   applyFilters,
   computeKpis,
@@ -18,6 +21,7 @@ import {
   fmtDateBR,
   statusParcela,
   todayISO,
+  type AsaasBillingType,
   type ClienteRef,
   type ContratoRef,
   type FinanceiroFilters,
@@ -67,6 +71,8 @@ export default function Financeiro() {
   const [drawerId, setDrawerId] = useState<number | null>(null);
   const [pagoValor, setPagoValor] = useState("");
   const [pagoData, setPagoData] = useState(todayISO());
+  const [gerandoCobranca, setGerandoCobranca] = useState<AsaasBillingType | null>(null);
+  const [cobrancaErro, setCobrancaErro] = useState("");
 
   async function refresh(manual = false) {
     if (manual) {
@@ -113,6 +119,7 @@ export default function Financeiro() {
     setDrawerId(p.id);
     setPagoValor(String(p.valor_pago ?? p.valor_parcela));
     setPagoData(p.pago_em || todayISO());
+    setCobrancaErro("");
   }
 
   async function handleCriar() {
@@ -196,6 +203,28 @@ export default function Financeiro() {
       setDrawerId(null);
     } catch (e: unknown) {
       alert("Erro ao remover: " + (e instanceof Error ? e.message : "erro desconhecido"));
+    }
+  }
+
+  async function handleGerarCobranca(tipo: AsaasBillingType) {
+    if (!drawerParcela) return;
+    setCobrancaErro("");
+    setGerandoCobranca(tipo);
+    try {
+      const { payment_url, status } = await gerarCobrancaAsaas(drawerParcela.id, tipo);
+      setParcelas((prev) =>
+        prev
+          ? prev.map((p) =>
+              p.id === drawerParcela.id
+                ? { ...p, asaas_payment_url: payment_url, asaas_status: status, asaas_billing_type: tipo }
+                : p
+            )
+          : prev
+      );
+    } catch (e: unknown) {
+      setCobrancaErro(e instanceof Error ? e.message : "Erro desconhecido ao gerar cobrança");
+    } finally {
+      setGerandoCobranca(null);
     }
   }
 
@@ -401,12 +430,13 @@ export default function Financeiro() {
               <th className="px-2.5 py-1.5">Vencimento</th>
               <th className="px-2.5 py-1.5">Valor</th>
               <th className="px-2.5 py-1.5">Status</th>
+              <th className="px-2.5 py-1.5">Cobrança</th>
             </tr>
           </thead>
           <tbody>
             {!filtradas.length && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-ink-400">
+                <td colSpan={8} className="px-3 py-6 text-center text-ink-400">
                   Nenhuma parcela encontrada.
                 </td>
               </tr>
@@ -425,6 +455,22 @@ export default function Financeiro() {
                 <td className="px-2.5 py-1.5">{fmtBRL(p.valor_parcela)}</td>
                 <td className="px-2.5 py-1.5">
                   <StatusBadge status={statusParcela(p)} />
+                </td>
+                <td className="px-2.5 py-1.5">
+                  {p.asaas_payment_url ? (
+                    <a
+                      href={p.asaas_payment_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300"
+                    >
+                      {p.asaas_billing_type === "PIX" ? <QrCode size={12} /> : <Receipt size={12} />}
+                      {ASAAS_STATUS_LABEL[p.asaas_status || ""] || p.asaas_status || "Gerada"}
+                    </a>
+                  ) : (
+                    <span className="text-xs text-ink-500">—</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -460,6 +506,60 @@ export default function Financeiro() {
             <div className="mb-4">
               <StatusBadge status={statusParcela(drawerParcela)} />
             </div>
+
+            {!drawerParcela.pago && (
+              <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
+                <p className="mb-2 text-xs text-ink-400">Cobrança automática (Asaas)</p>
+                {drawerParcela.asaas_payment_url ? (
+                  <div className="space-y-2">
+                    <p className="flex items-center gap-1.5 text-sm text-ink-100">
+                      {drawerParcela.asaas_billing_type === "PIX" ? (
+                        <QrCode size={14} className="text-brand-400" />
+                      ) : (
+                        <Receipt size={14} className="text-brand-400" />
+                      )}
+                      {ASAAS_STATUS_LABEL[drawerParcela.asaas_status || ""] || drawerParcela.asaas_status}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={drawerParcela.asaas_payment_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md border border-ink-600 px-2.5 py-1 text-xs text-ink-200 hover:border-ink-500"
+                      >
+                        <ExternalLink size={12} /> Abrir cobrança
+                      </a>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(drawerParcela.asaas_payment_url || "");
+                        }}
+                        className="inline-flex items-center gap-1 rounded-md border border-ink-600 px-2.5 py-1 text-xs text-ink-200 hover:border-ink-500"
+                      >
+                        <Copy size={12} /> Copiar link
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => handleGerarCobranca("PIX")}
+                      disabled={gerandoCobranca !== null}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-500 disabled:opacity-50"
+                    >
+                      <QrCode size={13} /> {gerandoCobranca === "PIX" ? "Gerando…" : "Gerar cobrança PIX"}
+                    </button>
+                    <button
+                      onClick={() => handleGerarCobranca("BOLETO")}
+                      disabled={gerandoCobranca !== null}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-ink-600 px-2.5 py-1 text-xs text-ink-200 hover:border-ink-500 disabled:opacity-50"
+                    >
+                      <Receipt size={13} /> {gerandoCobranca === "BOLETO" ? "Gerando…" : "Gerar boleto"}
+                    </button>
+                  </div>
+                )}
+                {cobrancaErro && <p className="mt-2 text-xs text-red-400">{cobrancaErro}</p>}
+              </div>
+            )}
 
             {!drawerParcela.pago ? (
               <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">

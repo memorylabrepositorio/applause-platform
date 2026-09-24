@@ -1,4 +1,5 @@
 import { fetchAllRows } from "@/lib/fetchAll";
+import { cached } from "@/lib/cache";
 import { loadVendasData } from "@/lib/vendas/fetch";
 import { computeLucroPorContrato, type ContratoRef, type LucroPorContrato } from "./engine";
 
@@ -12,7 +13,7 @@ interface ContaPagarRow {
   valor_pago: number;
 }
 
-export async function loadLucroPorContrato(): Promise<LucroPorContrato[]> {
+async function loadLucroPorContratoUncached(): Promise<LucroPorContrato[]> {
   const [contratos, parcelas, contasPagar, vendas] = await Promise.all([
     fetchAllRows<ContratoRef>("contratos", "nro_controle,instituicao,curso"),
     fetchAllRows<ParcelaRow>("financeiro_parcelas", "contrato_nro_controle,valor_parcela"),
@@ -48,4 +49,10 @@ export async function loadLucroPorContrato(): Promise<LucroPorContrato[]> {
     });
 
   return computeLucroPorContrato(contratos, parcelasPorContrato, pdvPorContrato, despesasPorContrato);
+}
+
+// cacheado — já reusa o loadVendasData (também cacheado), então em geral
+// esse é só o custo de contratos/parcelas/contas_pagar
+export function loadLucroPorContrato(): Promise<LucroPorContrato[]> {
+  return cached("lucro", loadLucroPorContratoUncached);
 }
