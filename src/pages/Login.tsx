@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { falarSaudacao, lerApelido, periodoAtual, primeiroNome } from "@/lib/greeting";
+import { loadUserPreferences } from "@/lib/preferences/fetch";
 import Logo from "@/components/Logo";
 import AppearanceMenu from "@/components/AppearanceMenu";
 
@@ -29,11 +30,15 @@ export default function Login() {
     }
     // saudação falada — dispara aqui, dentro do gesto de clique do usuário
     // (login), que é o que a maioria dos navegadores exige pra liberar áudio.
-    // o apelido é lido pelo ID desta conta que acabou de logar — nunca do
-    // apelido de quem usou o computador antes (ver lerApelido em lib/greeting)
+    // busca as preferências direto do banco (fonte de verdade entre contas/
+    // computadores); se falhar ou estiver offline, cai pro cache local desta
+    // máquina (lerApelido) e pro que já está no contexto, sem travar o login
     if (saudacaoAudio) {
-      const apelido = lerApelido(data.session);
-      falarSaudacao(primeiroNome(data.session, apelido), saudacaoTextos[periodoAtual()], saudacaoVozId);
+      const prefs = await loadUserPreferences();
+      const apelido = prefs?.apelido || lerApelido(data.session);
+      const textos = { ...saudacaoTextos, ...prefs?.saudacaoTextos };
+      const vozId = prefs?.saudacaoVozId ?? saudacaoVozId;
+      falarSaudacao(primeiroNome(data.session, apelido), textos[periodoAtual()], vozId);
     }
   }
 

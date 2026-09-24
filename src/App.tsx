@@ -37,8 +37,8 @@ function Home() {
 
 export default function App() {
   return (
-    <ThemeProvider>
     <AuthProvider>
+    <ThemeProvider>
       <HashRouter>
         <Suspense fallback={<PageFallback />}>
         <Routes>
@@ -150,7 +150,7 @@ export default function App() {
         </Routes>
         </Suspense>
       </HashRouter>
-    </AuthProvider>
     </ThemeProvider>
+    </AuthProvider>
   );
 }
