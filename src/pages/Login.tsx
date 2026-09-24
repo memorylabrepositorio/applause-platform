@@ -3,13 +3,13 @@ import { Navigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { falarSaudacao, periodoAtual, primeiroNome } from "@/lib/greeting";
+import { falarSaudacao, lerApelido, periodoAtual, primeiroNome } from "@/lib/greeting";
 import Logo from "@/components/Logo";
 import AppearanceMenu from "@/components/AppearanceMenu";
 
 export default function Login() {
   const { session } = useAuth();
-  const { saudacaoAudio, apelido, saudacaoTextos, saudacaoVozId } = useTheme();
+  const { saudacaoAudio, saudacaoTextos, saudacaoVozId } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +28,11 @@ export default function Login() {
       return;
     }
     // saudação falada — dispara aqui, dentro do gesto de clique do usuário
-    // (login), que é o que a maioria dos navegadores exige pra liberar áudio
+    // (login), que é o que a maioria dos navegadores exige pra liberar áudio.
+    // o apelido é lido pelo ID desta conta que acabou de logar — nunca do
+    // apelido de quem usou o computador antes (ver lerApelido em lib/greeting)
     if (saudacaoAudio) {
+      const apelido = lerApelido(data.session);
       falarSaudacao(primeiroNome(data.session, apelido), saudacaoTextos[periodoAtual()], saudacaoVozId);
     }
   }

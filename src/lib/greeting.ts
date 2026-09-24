@@ -46,8 +46,36 @@ export function montarTexto(template: string, nome: string | null): string {
     .trim();
 }
 
+/** O apelido é por PESSOA (id do usuário no Supabase Auth), não por
+ *  computador/navegador — senão, num dispositivo compartilhado, o apelido de
+ *  quem logou primeiro "gruda" e é falado pro próximo que logar depois. */
+function apelidoKey(uid: string): string {
+  return `applause_apelido_${uid}`;
+}
+
+export function lerApelido(session: Session | null): string {
+  const uid = session?.user?.id;
+  if (!uid) return "";
+  try {
+    return localStorage.getItem(apelidoKey(uid)) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function salvarApelido(session: Session | null, valor: string): void {
+  const uid = session?.user?.id;
+  if (!uid) return;
+  try {
+    localStorage.setItem(apelidoKey(uid), valor);
+  } catch {
+    /* localStorage indisponível — segue só na sessão */
+  }
+}
+
 /** Nome/apelido pra saudação. Ordem de prioridade:
- *  1) apelido escolhido pela pessoa em Configurações (livre, sem alterações)
+ *  1) apelido escolhido pela pessoa em Configurações (livre, sem alterações) —
+ *     guardado por pessoa, não por computador (ver lerApelido/salvarApelido)
  *  2) nome cadastrado no Supabase Auth (user_metadata.full_name / name)
  *  3) derivado do e-mail, como último recurso */
 export function primeiroNome(session: Session | null, apelido?: string): string | null {

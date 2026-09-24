@@ -18,8 +18,6 @@ interface ThemeState {
   defaultRoute: string;
   /** saudação falada ("Bom dia, {nome}") ao logar — ligado por padrão */
   saudacaoAudio: boolean;
-  /** como a pessoa quer ser chamada na saudação — vazio = usa nome/e-mail cadastrado */
-  apelido: string;
   /** texto da saudação por período do dia — usa {nome} como placeholder */
   saudacaoTextos: Record<Periodo, string>;
   /** id (nome|idioma) da voz escolhida — vazio = escolhe automaticamente uma voz em pt-BR */
@@ -31,7 +29,6 @@ interface ThemeState {
   setDensity: (d: Density) => void;
   setDefaultRoute: (r: string) => void;
   setSaudacaoAudio: (v: boolean) => void;
-  setApelido: (v: string) => void;
   setSaudacaoTexto: (periodo: Periodo, texto: string) => void;
   setSaudacaoVozId: (id: string) => void;
 }
@@ -44,7 +41,6 @@ const FONT_SIZE_KEY = "applause_font_size";
 const DENSITY_KEY = "applause_density";
 const DEFAULT_ROUTE_KEY = "applause_default_route";
 const SAUDACAO_AUDIO_KEY = "applause_saudacao_audio";
-const APELIDO_KEY = "applause_apelido";
 const SAUDACAO_TEXTO_KEY_PREFIX = "applause_saudacao_texto_"; // + manha|tarde|noite
 const SAUDACAO_VOZ_KEY = "applause_saudacao_voz";
 
@@ -79,7 +75,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [saudacaoAudio, setSaudacaoAudioState] = useState<boolean>(
     () => readStored(SAUDACAO_AUDIO_KEY, "1") === "1"
   );
-  const [apelido, setApelidoState] = useState<string>(() => readStored(APELIDO_KEY, ""));
   const [saudacaoTextos, setSaudacaoTextosState] = useState<Record<Periodo, string>>(() => ({
     manha: readStored(SAUDACAO_TEXTO_KEY_PREFIX + "manha", SAUDACAO_PADRAO.manha),
     tarde: readStored(SAUDACAO_TEXTO_KEY_PREFIX + "tarde", SAUDACAO_PADRAO.tarde),
@@ -159,14 +154,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(APELIDO_KEY, apelido);
-    } catch {
-      /* idem */
-    }
-  }, [apelido]);
-
-  useEffect(() => {
-    try {
       (Object.keys(saudacaoTextos) as Periodo[]).forEach((p) => {
         localStorage.setItem(SAUDACAO_TEXTO_KEY_PREFIX + p, saudacaoTextos[p]);
       });
@@ -204,7 +191,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         density,
         defaultRoute,
         saudacaoAudio,
-        apelido,
         saudacaoTextos,
         saudacaoVozId,
         toggleTheme,
@@ -214,7 +200,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setDensity: setDensityState,
         setDefaultRoute: setDefaultRouteState,
         setSaudacaoAudio: setSaudacaoAudioState,
-        setApelido: setApelidoState,
         setSaudacaoTexto,
         setSaudacaoVozId: setSaudacaoVozIdState,
       }}

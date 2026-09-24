@@ -9,7 +9,15 @@ import { loadFinanceiroConfig, saveFinanceiroConfig, testarConexaoAsaas } from "
 import type { FinanceiroConfig } from "@/lib/financeiro/fetch";
 import { useTheme, type Accent, type FontSize, type Density, type ThemePreference } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { falarSaudacao, listarVozes, primeiroNome, idDaVoz, type Periodo } from "@/lib/greeting";
+import {
+  falarSaudacao,
+  listarVozes,
+  primeiroNome,
+  idDaVoz,
+  lerApelido,
+  salvarApelido,
+  type Periodo,
+} from "@/lib/greeting";
 
 const NAV_ITEMS = [
   { to: "/vendas", label: "Vendas" },
@@ -98,8 +106,6 @@ function AparenciaTab() {
     setDefaultRoute,
     saudacaoAudio,
     setSaudacaoAudio,
-    apelido,
-    setApelido,
     saudacaoTextos,
     setSaudacaoTexto,
     saudacaoVozId,
@@ -109,6 +115,16 @@ function AparenciaTab() {
   const [testando, setTestando] = useState<Periodo | null>(null);
   const [testandoVoz, setTestandoVoz] = useState(false);
   const [vozes, setVozes] = useState<SpeechSynthesisVoice[]>([]);
+  // apelido é por pessoa (ID da conta), não por computador — senão o de quem
+  // logou antes "gruda" e é falado pro próximo que entrar no mesmo aparelho
+  const [apelido, setApelidoState] = useState<string>(() => lerApelido(session));
+  useEffect(() => {
+    setApelidoState(lerApelido(session));
+  }, [session?.user?.id]);
+  function setApelido(valor: string) {
+    setApelidoState(valor);
+    salvarApelido(session, valor);
+  }
   const nomePadrao = primeiroNome(session) ?? "";
   const nomeAtual = primeiroNome(session, apelido);
 
