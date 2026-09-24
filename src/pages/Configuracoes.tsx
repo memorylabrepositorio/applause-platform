@@ -9,7 +9,7 @@ import { loadFinanceiroConfig, saveFinanceiroConfig, testarConexaoAsaas } from "
 import type { FinanceiroConfig } from "@/lib/financeiro/fetch";
 import { useTheme, type Accent, type FontSize, type Density, type ThemePreference } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { falarSaudacao, primeiroNome } from "@/lib/greeting";
+import { falarSaudacao, listarVozes, primeiroNome, idDaVoz, type Periodo } from "@/lib/greeting";
 
 const NAV_ITEMS = [
   { to: "/vendas", label: "Vendas" },
@@ -100,10 +100,33 @@ function AparenciaTab() {
     setSaudacaoAudio,
     apelido,
     setApelido,
+    saudacaoTextos,
+    setSaudacaoTexto,
+    saudacaoVozId,
+    setSaudacaoVozId,
   } = useTheme();
   const { session } = useAuth();
-  const [testando, setTestando] = useState(false);
+  const [testando, setTestando] = useState<Periodo | null>(null);
+  const [vozes, setVozes] = useState<SpeechSynthesisVoice[]>([]);
   const nomePadrao = primeiroNome(session) ?? "";
+  const nomeAtual = primeiroNome(session, apelido);
+
+  useEffect(() => {
+    if (!saudacaoAudio) return;
+    listarVozes().then(setVozes);
+  }, [saudacaoAudio]);
+
+  async function testar(periodo: Periodo) {
+    setTestando(periodo);
+    await falarSaudacao(nomeAtual, saudacaoTextos[periodo], saudacaoVozId);
+    setTestando(null);
+  }
+
+  const PERIODOS: { id: Periodo; label: string }[] = [
+    { id: "manha", label: "Manhã (antes das 12h)" },
+    { id: "tarde", label: "Tarde (12h–18h)" },
+    { id: "noite", label: "Noite (depois das 18h)" },
+  ];
 
   const THEME_OPTIONS: { id: ThemePreference; label: string }[] = [
     { id: "dark", label: "Escuro" },
@@ -254,9 +277,9 @@ function AparenciaTab() {
           </button>
         </div>
         {saudacaoAudio && (
-          <>
-            <div className="mt-3 space-y-1">
-              <label className="text-xs text-ink-400">Como você quer ser chamado(a)</label>
+          <div className="mt-4 space-y-4 border-t border-ink-800 pt-4">
+            <div className="space-y-1">
+              <label className="block text-xs text-ink-400">Como você quer ser chamado(a)</label>
               <input
                 type="text"
                 value={apelido}
@@ -270,19 +293,61 @@ function AparenciaTab() {
                 navegador/computador.
               </p>
             </div>
-            <button
-              type="button"
-              disabled={testando}
-              onClick={async () => {
-                setTestando(true);
-                await falarSaudacao(primeiroNome(session, apelido));
-                setTestando(false);
-              }}
-              className="mt-3 rounded-md border border-ink-600 px-3 py-1.5 text-xs text-ink-200 transition hover:border-ink-500 disabled:opacity-50"
-            >
-              {testando ? "Falando…" : "Testar"}
-            </button>
-          </>
+
+            <div className="space-y-1">
+              <label className="block text-xs text-ink-400">Voz</label>
+              <select
+                value={saudacaoVozId}
+                onChange={(e) => setSaudacaoVozId(e.target.value)}
+                className="w-full max-w-sm rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1.5 text-sm text-ink-50"
+              >
+                <option value="">Automática (melhor voz em pt-BR disponível)</option>
+                {vozes.map((v) => (
+                  <option key={idDaVoz(v)} value={idDaVoz(v)}>
+                    {v.name} — {v.lang}
+                    {v.localService ? "" : " (online)"}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-ink-500">
+                {vozes.length > 0
+                  ? `${vozes.length} voz(es) disponível(is) neste navegador. A lista varia por computador/sistema.`
+                  : "Carregando vozes do navegador… se não aparecer nenhuma, esse navegador não expõe vozes em português."}
+              </p>
+            </div>
+
+            <div className="space-y-2.5">
+              <div>
+                <label className="text-xs text-ink-400">Mensagem por período do dia</label>
+                <p className="text-[11px] text-ink-500">
+                  Use {"{nome}"} onde quiser inserir o nome/apelido escolhido acima.
+                </p>
+              </div>
+              {PERIODOS.map((p) => (
+                <div key={p.id} className="flex items-center gap-2">
+                  <div className="flex-1 space-y-1">
+                    <label className="block text-[11px] text-ink-500">{p.label}</label>
+                    <input
+                      type="text"
+                      value={saudacaoTextos[p.id]}
+                      onChange={(e) => setSaudacaoTexto(p.id, e.target.value)}
+                      maxLength={120}
+                      className="w-full rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1.5 text-sm text-ink-50"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={testando === p.id}
+                    onClick={() => testar(p.id)}
+                    title="Testar esta mensagem"
+                    className="mt-4 shrink-0 rounded-md border border-ink-600 px-3 py-1.5 text-xs text-ink-200 transition hover:border-ink-500 disabled:opacity-50"
+                  >
+                    {testando === p.id ? "Falando…" : "Testar"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </section>
 
