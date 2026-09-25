@@ -1,0 +1,12 @@
+Backup do Mapa como estava ANTES da versão "sinapses" (ramos retos, com
+funções desenhadas como pontos ao longo de cada ramo, sem painel lateral
+nem tela cheia por setor). Guardado em 25/09/2026 a pedido do usuário,
+antes de implementar o novo design com curvas orgânicas tipo sinapse,
+painel lateral e "entrar no setor" em tela cheia.
+
+Pra voltar a este modelo, basta copiar os 4 arquivos de volta:
+  Mapa.tsx.bak    -> src/pages/Mapa.tsx
+  Mapa.css.bak    -> src/pages/Mapa.css
+  layout.ts.bak   -> src/lib/mapa/layout.ts
+  data.ts.bak     -> src/lib/mapa/data.ts   (data.ts não muda no novo design,
+                                              guardado aqui só por segurança)
