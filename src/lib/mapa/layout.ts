@@ -1,33 +1,47 @@
 import type { MapaDepartamento, MapaFuncao } from "./data";
 
 /**
- * Geometria do Mapa — função pura, sem React.
+ * Geometria do Mapa — função pura, sem React. Recebe os departamentos e
+ * devolve tudo já posicionado em coordenadas do "palco" (0,0 = centro do
+ * núcleo). A página só desenha o que sai daqui.
  *
- * Cada departamento se liga ao núcleo por uma curva suave ("sinapse"), não
- * por uma linha reta. Pra não virar um nó de linhas cruzadas no centro,
- * duas coisas importam: (1) cada curva nasce num ponto já separado dos
- * outros, numa "gola" pequena ao redor do núcleo, na direção do próprio
- * setor — não todas saindo do mesmo pixel; (2) todas arqueiam pro mesmo
- * lado (sentido horário), então formam um redemoinho suave em vez de se
- * cruzar. Poucos elementos, traço fino — refinado, não decorado.
- *
- * As funções de um departamento não ficam mais desenhadas no mapa: ficam
- * num painel lateral (setor em foco/hover) e, ao clicar de novo no setor,
- * numa tela cheia com a mesma linguagem (ver construirFoco).
+ * As medidas seguem o desenho de referência: núcleo com raio 115, anéis em
+ * 168/236, ícone do departamento a 310 do centro e rótulo por fora.
  */
 
 export type Pt = [number, number];
+export interface Seg {
+  a: Pt;
+  b: Pt;
+}
+
+export interface MapaPonto {
+  pos: Pt;
+  funcao: MapaFuncao;
+  delay: number;
+}
+
+export interface MapaRamo {
+  stub: Seg;
+  juncao: Pt;
+  arestas: Seg[];
+  pontos: MapaPonto[];
+}
 
 export interface MapaDeptLayout {
   dept: MapaDepartamento;
   angulo: number;
-  sinapseIda: string;
+  raio: Seg;
+  juncoes: Pt[];
   badge: Pt;
   rotulo: Pt;
-  mote: { dur: number; begin: number };
+  ramos: MapaRamo[];
+  motes: { ida: string; volta: string; durIda: number; durVolta: number; beginIda: number; beginVolta: number };
 }
 
 export interface MapaNucleoLayout {
+  arestas: { seg: Seg; opacidade: number; tracejada: boolean }[];
+  pontos: { pos: Pt; r: number; cor: string | null; opacidade: number }[];
   nucleo: Pt;
   satelite: Pt;
 }
@@ -46,16 +60,11 @@ export interface MapaLayout {
   estrelas: MapaEstrela[];
 }
 
-export interface MapaFocoPonto {
-  funcao: MapaFuncao;
-  pos: Pt;
-  curva: string;
-}
-
-/** posições no círculo, em graus — 8 posições, uma pra cada setor real da empresa */
+/** posições no círculo, em graus (sentido horário a partir do topo-esquerdo) —
+ *  8 posições, uma pra cada departamento real da empresa */
 const ANGULOS = [202.5, 247.5, 292.5, 337.5, 22.5, 67.5, 112.5, 157.5];
 
-export const MAPA_EXTENSAO = { largura: 1320, altura: 1320 };
+export const MAPA_EXTENSAO = { largura: 2900, altura: 2980 };
 
 // gerador pseudo-aleatório com semente — o desenho sai igual em toda visita
 function rng(seed: number) {
@@ -65,45 +74,96 @@ function rng(seed: number) {
 
 const rad = (g: number) => (g * Math.PI) / 180;
 const polar = (r: number, g: number): Pt => [r * Math.cos(rad(g)), r * Math.sin(rad(g))];
-const p1 = (v: Pt) => `${v[0].toFixed(2)} ${v[1].toFixed(2)}`;
-
-/** curva suave entre dois pontos, sempre arqueando no mesmo sentido
- *  (redemoinho, não zig-zag) — `desvio` é discreto de propósito. */
-function sinapse(a: Pt, b: Pt, desvio: number, rnd: () => number): string {
-  const dx = b[0] - a[0];
-  const dy = b[1] - a[1];
-  const len = Math.hypot(dx, dy) || 1;
-  const nx = -dy / len;
-  const ny = dx / len;
-  const c1: Pt = [a[0] + dx * 0.33 + nx * desvio * (0.7 + rnd() * 0.3), a[1] + dy * 0.33 + ny * desvio * (0.7 + rnd() * 0.3)];
-  const c2: Pt = [a[0] + dx * 0.66 + nx * desvio * (0.4 + rnd() * 0.3), a[1] + dy * 0.66 + ny * desvio * (0.4 + rnd() * 0.3)];
-  return `M ${p1(a)} C ${p1(c1)}, ${p1(c2)}, ${p1(b)}`;
-}
 
 export function construirMapa(depts: MapaDepartamento[]): MapaLayout {
   const rnd = rng(7);
 
   const deptsLayout = depts.slice(0, 8).map((dept, i): MapaDeptLayout => {
     const angulo = ANGULOS[i];
-    const badge = polar(300, angulo);
-    const rotulo = polar(398, angulo);
-    // a curva nasce numa "gola" pequena ao redor do núcleo, já na direção
-    // do próprio setor — assim as 8 curvas não se encontram no mesmo pixel
-    const origem = polar(18, angulo);
-    const desvio = 24 * (0.85 + rnd() * 0.3);
-    const ida = sinapse(origem, badge, desvio, rnd);
+    const inicio = polar(115, angulo);
+    const fimRaio = polar(272, angulo);
+    const badge = polar(330, angulo);
+    // nenhuma das 8 posições cai exatamente na vertical, então uma
+    // distância só já basta pro rótulo (sem "vazar" nas bordas)
+    const rotulo = polar(920, angulo);
 
+    const n = dept.ramos.length;
+    // com 8 departamentos (45° entre cada um, vs 60° de quando eram 6),
+    // a abertura dos ramos encolhe um pouco pra não invadir o vizinho
+    const abertura = n === 1 ? 0 : n === 2 ? 28 : 30;
+    let atraso = 0;
+
+    const ramos = dept.ramos.map((ramo, k): MapaRamo => {
+      const ang = angulo + (k - (n - 1) / 2) * abertura;
+      const ux = Math.cos(rad(ang));
+      const uy = Math.sin(rad(ang));
+      const px = -uy;
+      const py = ux;
+      const stubIni: Pt = [badge[0] + ux * 44, badge[1] + uy * 44];
+      const juncao: Pt = [badge[0] + ux * 92, badge[1] + uy * 92];
+      const arestas: Seg[] = [];
+      const pontos: MapaPonto[] = [];
+      let anterior = juncao;
+      ramo.forEach((funcao, s) => {
+        // espaçamento maior entre os pontos do ramo — fica mais fácil de
+        // acessar cada função individualmente sem errar o clique
+        const ao = 92 + (s + 1) * 78;
+        const zz = (s % 2 ? 1 : -1) * (8 + rnd() * 12);
+        const pos: Pt = [badge[0] + ux * ao + px * zz, badge[1] + uy * ao + py * zz];
+        arestas.push({ a: anterior, b: pos });
+        atraso += 0.18;
+        pontos.push({ pos, funcao, delay: i * 0.12 + atraso });
+        anterior = pos;
+      });
+      return { stub: { a: stubIni, b: juncao }, juncao, arestas, pontos };
+    });
+
+    const p = (a: Pt, b: Pt) => `M ${a[0].toFixed(2)} ${a[1].toFixed(2)} L ${b[0].toFixed(2)} ${b[1].toFixed(2)}`;
     return {
       dept,
       angulo,
-      sinapseIda: ida,
+      raio: { a: inicio, b: fimRaio },
+      juncoes: [polar(168, angulo), polar(236, angulo)],
       badge,
       rotulo,
-      mote: { dur: 3.4 + rnd() * 1.8, begin: i * 0.5 },
+      ramos,
+      motes: {
+        ida: p(inicio, badge),
+        volta: p(badge, inicio),
+        durIda: 2.6 + rnd() * 1.6,
+        durVolta: 3.5 + rnd(),
+        beginIda: i * 0.43,
+        beginVolta: 1.3 + i * 0.6,
+      },
     };
   });
 
-  const estrelas: MapaEstrela[] = Array.from({ length: 90 }, () => ({
+  // núcleo: nuvem de pontos com arestas partindo do centro — mais discreta
+  // que a original, pra não competir com os setores ao redor
+  const cores = depts.map((d) => d.cor);
+  const pts: Pt[] = [];
+  for (let i = 0; i < 80; i++) {
+    const r = 130 * Math.sqrt(rnd());
+    const t = rnd() * Math.PI * 2;
+    pts.push([r * Math.cos(t), r * Math.sin(t)]);
+  }
+  const nucleo: Pt = [-26, -19.5];
+  const arestas: MapaNucleoLayout["arestas"] = pts
+    .slice(0, 16)
+    .map((b) => ({ seg: { a: nucleo, b }, opacidade: 0.06 + rnd() * 0.1, tracejada: false }));
+  for (let i = 0; i < 8; i++) {
+    const a = pts[Math.floor(rnd() * pts.length)];
+    const b = pts[Math.floor(rnd() * pts.length)];
+    arestas.push({ seg: { a, b }, opacidade: 0.04 + rnd() * 0.05, tracejada: true });
+  }
+  const pontos = pts.map((pos) => ({
+    pos,
+    r: 0.8 + rnd() * 1,
+    cor: rnd() < 0.35 ? cores[Math.floor(rnd() * cores.length)] : null,
+    opacidade: 0.28 + rnd() * 0.4,
+  }));
+
+  const estrelas: MapaEstrela[] = Array.from({ length: 110 }, () => ({
     left: rnd() * 100,
     top: rnd() * 100,
     size: rnd() < 0.25 ? 2 : 1,
@@ -111,28 +171,5 @@ export function construirMapa(depts: MapaDepartamento[]): MapaLayout {
     dur: 4 + rnd() * 5,
   }));
 
-  return { depts: deptsLayout, nucleo: { nucleo: [0, 0], satelite: [15, 11] }, estrelas };
-}
-
-/** layout da "tela cheia" de um setor: n funções em roda ao redor do centro,
- *  cada uma ligada por uma curva-sinapse — mesma linguagem visual do mapa
- *  geral, num redemoinho suave em vez de um nó cruzado. */
-export function construirFoco(funcoes: MapaFuncao[]): MapaFocoPonto[] {
-  const rnd = rng(31 + funcoes.length);
-  const n = funcoes.length;
-  // com mais funções o raio cresce — senão os cartões (largos) se
-  // amontoam nos setores com 8-9 itens. A tela é mais larga que alta, então
-  // o "círculo" vira uma elipse achatada — senão os cartões de cima/baixo
-  // saem da área visível antes dos da lateral.
-  const raioBase = 250 + n * 14;
-  return funcoes.map((funcao, i) => {
-    const ang = (i / n) * 360 - 90 + (rnd() - 0.5) * 4;
-    const rx = raioBase + rnd() * 22;
-    const ry = (raioBase + rnd() * 22) * 0.64;
-    const pos: Pt = [rx * Math.cos(rad(ang)), ry * Math.sin(rad(ang))];
-    const origem = polar(20, ang);
-    const desvio = 26 * (0.8 + rnd() * 0.3);
-    const curva = sinapse(origem, pos, desvio, rnd);
-    return { funcao, pos, curva };
-  });
+  return { depts: deptsLayout, nucleo: { arestas, pontos, nucleo, satelite: [22.1, 24.7] }, estrelas };
 }
