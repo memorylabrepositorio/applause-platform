@@ -160,7 +160,7 @@ export default function Mapa() {
             <svg className={`mapa-svg${hoverId ? " apagando" : ""}`} width={2640} height={2640} viewBox="-1320 -1320 2640 2640" aria-hidden="true">
               <defs>
                 <filter id="mapa-glow" x="-120%" y="-120%" width="340%" height="340%">
-                  <feGaussianBlur stdDeviation="1.6" result="blur" />
+                  <feGaussianBlur stdDeviation="1" result="blur" />
                   <feMerge>
                     <feMergeNode in="blur" />
                     <feMergeNode in="SourceGraphic" />
@@ -168,57 +168,29 @@ export default function Mapa() {
                 </filter>
               </defs>
 
-              <circle r={168} className="mapa-anel" strokeDasharray="2 9" />
-              <circle r={236} className="mapa-anel" strokeDasharray="1 6" />
-
-              <g filter="url(#mapa-glow)">
-                {depts.map((x) => (
-                  <g
-                    key={x.dept.id}
-                    style={{ color: x.dept.cor }}
-                    className={`mapa-svg-dept${hoverId && hoverId !== x.dept.id ? " apagado" : ""}`}
-                  >
-                    <path d={x.sinapseIda} className="mapa-sinapse" />
-                    {x.dendritos.map((dd, k) => (
-                      <path key={k} d={dd} className="mapa-dendrito" />
-                    ))}
-                    {x.juncoes.map((j, k) => (
-                      <circle key={k} cx={j[0]} cy={j[1]} r={1.8} className="mapa-juncao" />
-                    ))}
-                    <circle r={2.6} className="mapa-mote">
-                      <animateMotion dur={`${x.motes.durIda.toFixed(2)}s`} begin={`${x.motes.beginIda.toFixed(2)}s`} repeatCount="indefinite" path={x.sinapseIda} />
-                    </circle>
-                    <circle r={1.8} className="mapa-mote claro">
-                      <animateMotion dur={`${x.motes.durVolta.toFixed(2)}s`} begin={`${x.motes.beginVolta.toFixed(2)}s`} repeatCount="indefinite" path={x.sinapseVolta} />
-                    </circle>
-                  </g>
-                ))}
-              </g>
-
-              <g className="mapa-cerebro">
-                {mapa.nucleo.arestas.map((a, i) => (
-                  <path
-                    key={i}
-                    d={`M ${a.seg.a[0].toFixed(2)} ${a.seg.a[1].toFixed(2)} L ${a.seg.b[0].toFixed(2)} ${a.seg.b[1].toFixed(2)}`}
-                    className="mapa-cerebro-aresta"
-                    strokeOpacity={a.opacidade}
-                    strokeDasharray={a.tracejada ? "1.5 3" : undefined}
-                  />
-                ))}
-                {mapa.nucleo.pontos.map((p, i) => (
-                  <circle key={i} cx={p.pos[0]} cy={p.pos[1]} r={p.r} fill={p.cor ?? "currentColor"} opacity={p.opacidade} />
-                ))}
+              {depts.map((x) => (
                 <g
-                  className={`mapa-nucleo-grupo${hoverNucleo ? " hover" : ""}`}
-                  style={{ transformOrigin: `${mapa.nucleo.nucleo[0]}px ${mapa.nucleo.nucleo[1]}px` } as CSSProperties}
-                  onMouseEnter={() => setHoverNucleo(true)}
-                  onMouseLeave={() => setHoverNucleo(false)}
+                  key={x.dept.id}
+                  style={{ color: x.dept.cor }}
+                  className={`mapa-svg-dept${hoverId && hoverId !== x.dept.id ? " apagado" : ""}`}
                 >
-                  <circle className="mapa-nucleo" cx={mapa.nucleo.nucleo[0]} cy={mapa.nucleo.nucleo[1]} r={5.85} />
-                  <circle cx={mapa.nucleo.satelite[0]} cy={mapa.nucleo.satelite[1]} r={4.4} fill="currentColor" />
-                  {/* área de toque maior — o ponto visível é pequeno demais pra passar o mouse com precisão */}
-                  <circle cx={mapa.nucleo.nucleo[0]} cy={mapa.nucleo.nucleo[1]} r={34} fill="transparent" className="mapa-nucleo-alvo" />
+                  <path d={x.sinapseIda} className="mapa-sinapse" />
+                  <circle r={2.4} className="mapa-mote">
+                    <animateMotion dur={`${x.mote.dur.toFixed(2)}s`} begin={`${x.mote.begin.toFixed(2)}s`} repeatCount="indefinite" path={x.sinapseIda} />
+                  </circle>
                 </g>
+              ))}
+
+              <g
+                className={`mapa-nucleo-grupo${hoverNucleo ? " hover" : ""}`}
+                style={{ transformOrigin: `${mapa.nucleo.nucleo[0]}px ${mapa.nucleo.nucleo[1]}px` } as CSSProperties}
+                onMouseEnter={() => setHoverNucleo(true)}
+                onMouseLeave={() => setHoverNucleo(false)}
+              >
+                <circle className="mapa-nucleo" cx={mapa.nucleo.nucleo[0]} cy={mapa.nucleo.nucleo[1]} r={5.85} />
+                <circle cx={mapa.nucleo.satelite[0]} cy={mapa.nucleo.satelite[1]} r={4.4} fill="currentColor" />
+                {/* área de toque maior — o ponto visível é pequeno demais pra passar o mouse com precisão */}
+                <circle cx={mapa.nucleo.nucleo[0]} cy={mapa.nucleo.nucleo[1]} r={34} fill="transparent" className="mapa-nucleo-alvo" />
               </g>
             </svg>
 
@@ -275,20 +247,6 @@ export default function Mapa() {
             <span>{proximo.nome}</span>
             <ChevronRight size={14} />
           </button>
-        )}
-
-        {foco && (
-          <div className="mapa-foco">
-            <button type="button" className="seta" style={{ left: "calc(50% - 215px)" }} onClick={() => irPara(-1)} aria-label="Departamento anterior">
-              <ChevronLeft size={22} strokeWidth={1.5} />
-            </button>
-            <button type="button" className="nome" onClick={() => setAbertoId(foco.id)} title={`Ver funções de ${foco.nome}`}>
-              {foco.nome}
-            </button>
-            <button type="button" className="seta" style={{ right: "calc(50% - 215px)" }} onClick={() => irPara(1)} aria-label="Próximo departamento">
-              <ChevronRight size={22} strokeWidth={1.5} />
-            </button>
-          </div>
         )}
 
         {painelDept && (
@@ -353,12 +311,7 @@ export default function Mapa() {
               <svg className="mapa-aberto-svg" width={1600} height={1600} viewBox="-800 -800 1600 1600" aria-hidden="true">
                 <g filter="url(#mapa-glow)" style={{ color: deptAberto.cor }}>
                   {pontosFoco.map((p, i) => (
-                    <g key={i}>
-                      <path d={p.curva} className="mapa-aberto-linha" />
-                      {p.pontos.map((pt, k) => (
-                        <circle key={k} cx={pt[0]} cy={pt[1]} r={1.6} fill={deptAberto.cor} opacity={0.45} />
-                      ))}
-                    </g>
+                    <path key={i} d={p.curva} className="mapa-aberto-linha" />
                   ))}
                 </g>
               </svg>

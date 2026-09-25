@@ -114,18 +114,10 @@
 }
 .mapa-svg { position: absolute; left: -1320px; top: -1320px; overflow: visible; }
 .mapa-svg-dept { transition: opacity 0.35s ease; }
-.mapa-svg.apagando .mapa-anel,
-.mapa-svg.apagando .mapa-cerebro { opacity: 0.3; transition: opacity 0.35s ease; }
-.mapa-svg-dept.apagado { opacity: 0.2; }
-.mapa-anel { fill: none; stroke: rgb(var(--m-texto) / 0.22); stroke-width: 1.4; }
-.mapa-sinapse { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-opacity: 0.55; }
-.mapa-dendrito { fill: none; stroke: currentColor; stroke-width: 1; stroke-opacity: 0.3; }
-.mapa-juncao { fill: rgb(var(--m-texto)); opacity: 0.6; }
-.mapa-mote { fill: currentColor; }
-.mapa-mote.claro { fill: rgb(var(--m-texto)); opacity: 0.75; }
-.mapa-cerebro { color: rgb(var(--m-texto)); animation: mapa-gira 180s linear infinite; transform-origin: 0 0; }
-@keyframes mapa-gira { to { transform: rotate(360deg); } }
-.mapa-cerebro-aresta { fill: none; stroke: currentColor; stroke-width: 1; }
+.mapa-svg.apagando .mapa-nucleo-grupo { opacity: 0.5; transition: opacity 0.35s ease; }
+.mapa-svg-dept.apagado { opacity: 0.16; }
+.mapa-sinapse { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-opacity: 0.42; }
+.mapa-mote { fill: currentColor; opacity: 0.85; }
 .mapa-nucleo { fill: rgb(var(--brand-400)); filter: drop-shadow(0 0 6px rgb(var(--brand-400))); transition: filter 0.25s ease; }
 .mapa-nucleo-grupo { transition: transform 0.25s ease; cursor: pointer; }
 .mapa-nucleo-grupo.hover { transform: scale(1.6); }
@@ -155,17 +147,17 @@
   position: absolute; width: 92px; height: 92px; transform: translate(-50%, -50%);
   border-radius: 50%; display: grid; place-items: center;
   color: var(--c); background: var(--m-badge);
-  border: 2.5px solid color-mix(in srgb, var(--c) 70%, transparent);
-  box-shadow: 0 0 32px color-mix(in srgb, var(--c) 38%, transparent);
+  border: 2px solid color-mix(in srgb, var(--c) 65%, transparent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--c) 28%, transparent);
   transition: box-shadow 0.3s, transform 0.2s;
 }
 .mapa-badge svg { width: 38px; height: 38px; }
 .mapa-badge:hover,
 .mapa-dept.hover .mapa-badge {
   transform: translate(-50%, -50%) scale(1.14);
-  box-shadow: 0 0 70px color-mix(in srgb, var(--c) 75%, transparent);
+  box-shadow: 0 0 48px color-mix(in srgb, var(--c) 60%, transparent);
 }
-.mapa-dept.foco .mapa-badge { box-shadow: 0 0 70px color-mix(in srgb, var(--c) 70%, transparent); }
+.mapa-dept.foco .mapa-badge { box-shadow: 0 0 40px color-mix(in srgb, var(--c) 50%, transparent); }
 
 .mapa-rotulo {
   position: absolute; transform: translate(-50%, -50%);
@@ -186,26 +178,6 @@
 .mapa-borda.dir { right: 352px; }
 @media (max-width: 900px) { .mapa-borda.dir { right: 18px; } }
 @media (max-width: 767px) { .mapa-borda { display: none; } }
-
-.mapa-foco {
-  position: absolute; left: 0; right: 336px; bottom: 3%; z-index: 20;
-  display: flex; justify-content: center; align-items: center; pointer-events: none;
-}
-@media (max-width: 900px) { .mapa-foco { right: 0; } }
-.mapa-foco .nome {
-  min-width: 180px; pointer-events: auto; text-align: center; color: rgb(var(--m-texto));
-  font: 17px var(--m-display); letter-spacing: 0.3em; text-transform: uppercase;
-}
-.mapa-foco .seta {
-  position: absolute; top: 50%; transform: translateY(-50%);
-  width: 48px; height: 48px; display: grid; place-items: center;
-  color: rgb(var(--m-texto-2)); pointer-events: auto;
-}
-.mapa-foco .seta:hover { color: rgb(var(--m-texto)); }
-@media (max-width: 639px) {
-  .mapa-foco .seta:first-child { left: 8px !important; }
-  .mapa-foco .seta:last-child { right: 8px !important; }
-}
 
 /* painel lateral — funções do setor em foco/hover */
 .mapa-painel {
@@ -297,7 +269,7 @@
 }
 .mapa-aberto-voltar:hover { color: rgb(var(--m-texto)); }
 
-.mapa-aberto-centro { position: absolute; left: 50%; top: 54%; width: 0; height: 0; transform: translate(-50%, -50%); }
+.mapa-aberto-centro { position: absolute; left: 50%; top: 52%; width: 0; height: 0; transform: translate(-50%, -50%); }
 @media (max-width: 1300px) { .mapa-aberto-centro { transform: translate(-50%, -50%) scale(0.82); } }
 @media (max-width: 900px) { .mapa-aberto-centro { transform: translate(-50%, -50%) scale(0.6); } }
 .mapa-aberto-svg { position: absolute; left: -800px; top: -800px; overflow: visible; pointer-events: none; }
@@ -330,7 +302,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mapa-mote { display: none; }
-  .mapa-estrela, .mapa-cerebro { animation: none; }
+  .mapa-estrela { animation: none; }
   .mapa-palco { transition: none; }
   .mapa-aberto { animation: none; }
 }
