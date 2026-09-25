@@ -10,6 +10,10 @@ const d = (s: Seg) => `M ${s.a[0].toFixed(2)} ${s.a[1].toFixed(2)} L ${s.b[0].to
 const at = (p: Pt): CSSProperties => ({ left: `${p[0].toFixed(2)}px`, top: `${p[1].toFixed(2)}px` });
 const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
+// zoom acima de 100% por padrão — o "ajuste" sozinho deixa o mapa cabendo
+// certinho no espaço, mas pequeno; isso faz ele ocupar mais tela de cara
+const ZOOM_PADRAO = 1.22;
+
 interface Dica {
   x: number;
   y: number;
@@ -27,7 +31,7 @@ export default function Mapa() {
     depts.some((x) => x.dept.id === MAPA_FOCO_INICIAL) ? MAPA_FOCO_INICIAL : depts[0]?.dept.id
   );
   const [ajuste, setAjuste] = useState(0.3);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(ZOOM_PADRAO);
   const [busca, setBusca] = useState("");
   const [dica, setDica] = useState<Dica | null>(null);
   const [telaCheia, setTelaCheia] = useState(false);
@@ -329,7 +333,7 @@ export default function Mapa() {
           <button type="button" onClick={() => setZoom((z) => Math.max(z / 1.2, 0.5))} aria-label="Diminuir zoom">−</button>
           <span className="pct">{Math.round(escala * 100)}%</span>
           <button type="button" onClick={() => setZoom((z) => Math.min(z * 1.2, 4))} aria-label="Aumentar zoom">+</button>
-          <button type="button" className="ajustar" onClick={() => setZoom(1)}>Ajustar</button>
+          <button type="button" className="ajustar" onClick={() => setZoom(ZOOM_PADRAO)}>Ajustar</button>
         </div>
 
         {dica && (

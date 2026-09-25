@@ -60,10 +60,11 @@ export interface MapaLayout {
   estrelas: MapaEstrela[];
 }
 
-/** posições no círculo, em graus (sentido horário a partir do topo-esquerdo) */
-const ANGULOS = [210, 270, 330, 30, 90, 150];
+/** posições no círculo, em graus (sentido horário a partir do topo-esquerdo) —
+ *  8 posições, uma pra cada departamento real da empresa */
+const ANGULOS = [202.5, 247.5, 292.5, 337.5, 22.5, 67.5, 112.5, 157.5];
 
-export const MAPA_EXTENSAO = { largura: 2600, altura: 2660 };
+export const MAPA_EXTENSAO = { largura: 2900, altura: 2980 };
 
 // gerador pseudo-aleatório com semente — o desenho sai igual em toda visita
 function rng(seed: number) {
@@ -77,16 +78,19 @@ const polar = (r: number, g: number): Pt => [r * Math.cos(rad(g)), r * Math.sin(
 export function construirMapa(depts: MapaDepartamento[]): MapaLayout {
   const rnd = rng(7);
 
-  const deptsLayout = depts.slice(0, 6).map((dept, i): MapaDeptLayout => {
+  const deptsLayout = depts.slice(0, 8).map((dept, i): MapaDeptLayout => {
     const angulo = ANGULOS[i];
     const inicio = polar(115, angulo);
     const fimRaio = polar(272, angulo);
-    const badge = polar(310, angulo);
-    const vertical = angulo === 90 || angulo === 270;
-    const rotulo = polar(vertical ? 800 : 860, angulo);
+    const badge = polar(330, angulo);
+    // nenhuma das 8 posições cai exatamente na vertical, então uma
+    // distância só já basta pro rótulo (sem "vazar" nas bordas)
+    const rotulo = polar(920, angulo);
 
     const n = dept.ramos.length;
-    const abertura = n === 1 ? 0 : n === 2 ? 32 : 36;
+    // com 8 departamentos (45° entre cada um, vs 60° de quando eram 6),
+    // a abertura dos ramos encolhe um pouco pra não invadir o vizinho
+    const abertura = n === 1 ? 0 : n === 2 ? 28 : 30;
     let atraso = 0;
 
     const ramos = dept.ramos.map((ramo, k): MapaRamo => {
@@ -95,13 +99,15 @@ export function construirMapa(depts: MapaDepartamento[]): MapaLayout {
       const uy = Math.sin(rad(ang));
       const px = -uy;
       const py = ux;
-      const stubIni: Pt = [badge[0] + ux * 40, badge[1] + uy * 40];
-      const juncao: Pt = [badge[0] + ux * 82, badge[1] + uy * 82];
+      const stubIni: Pt = [badge[0] + ux * 44, badge[1] + uy * 44];
+      const juncao: Pt = [badge[0] + ux * 92, badge[1] + uy * 92];
       const arestas: Seg[] = [];
       const pontos: MapaPonto[] = [];
       let anterior = juncao;
       ramo.forEach((funcao, s) => {
-        const ao = 82 + (s + 1) * 58;
+        // espaçamento maior entre os pontos do ramo — fica mais fácil de
+        // acessar cada função individualmente sem errar o clique
+        const ao = 92 + (s + 1) * 78;
         const zz = (s % 2 ? 1 : -1) * (8 + rnd() * 12);
         const pos: Pt = [badge[0] + ux * ao + px * zz, badge[1] + uy * ao + py * zz];
         arestas.push({ a: anterior, b: pos });

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Landmark, Handshake, GalleryHorizontalEnd, Clapperboard, Wallet, Megaphone } from "lucide-react";
+import { Landmark, Handshake, GalleryHorizontalEnd, Clapperboard, Wallet, Megaphone, Camera, Crown } from "lucide-react";
 
 /**
  * Conteúdo do Mapa (página inicial).
@@ -15,7 +15,9 @@ import { Landmark, Handshake, GalleryHorizontalEnd, Clapperboard, Wallet, Megaph
  *                   Apps Script…); aparece na dica ao passar o mouse
  *
  * A ordem do array define a posição no círculo (sentido horário, começando
- * no canto superior esquerdo). O mapa comporta exatamente 6 departamentos.
+ * no canto superior esquerdo). O mapa comporta exatamente 8 departamentos —
+ * um pra cada setor real da empresa (Diretoria, Comercial, Edição,
+ * Atendimento, Financeiro, Marketing, Estúdio, Produção).
  */
 
 export type MapaStatus = "ok" | "dev";
@@ -41,9 +43,23 @@ export interface MapaDepartamento {
 export const MAPA_NUCLEO = { nome: "Base de Conhecimento", sub: "nó zero" };
 
 /** departamento que abre em destaque */
-export const MAPA_FOCO_INICIAL = "vendas";
+export const MAPA_FOCO_INICIAL = "comercial";
 
 export const DEPARTAMENTOS: MapaDepartamento[] = [
+  {
+    id: "diretoria",
+    nome: "Diretoria",
+    sub: "indicadores · permissões · gestão",
+    cor: "#34D399",
+    icon: Crown,
+    ramos: [
+      [
+        { nome: "Indicadores gerais", status: "dev" },
+        { nome: "Relatórios consolidados", status: "dev" },
+        { nome: "Controle de permissões por setor", status: "dev" },
+      ],
+    ],
+  },
   {
     id: "financeiro",
     nome: "Financeiro",
@@ -105,7 +121,6 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
       [
         { nome: "Status dos itens vendidos", status: "ok", to: "/producao" },
         { nome: "Checklist de solenidade", status: "ok", to: "/checklist" },
-        { nome: "Funil de álbuns", status: "ok", origem: "Apps Script" },
       ],
       [
         { nome: "Reconhecimento facial", status: "ok", origem: "RECFACIAL-IA" },
@@ -119,9 +134,27 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
     ],
   },
   {
-    id: "criacao",
-    nome: "Criação",
-    sub: "convites · vídeos · músicas",
+    id: "estudio",
+    nome: "Estúdio",
+    sub: "sessões · Caxias · POA · N. Hamburgo",
+    cor: "#FB923C",
+    icon: Camera,
+    to: "/p4f",
+    ramos: [
+      [
+        { nome: "P4F / Sessão estúdio", status: "ok", to: "/p4f" },
+        { nome: "Indicadores por unidade", status: "ok", to: "/p4f" },
+      ],
+      [
+        { nome: "Agenda de sessões", status: "dev" },
+        { nome: "Controle de equipamento", status: "dev" },
+      ],
+    ],
+  },
+  {
+    id: "edicao",
+    nome: "Edição",
+    sub: "convites · vídeos · álbuns",
     cor: "#38BDF8",
     icon: Clapperboard,
     ramos: [
@@ -136,19 +169,22 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
         { nome: "Slideshow de fotos com fade", status: "dev", origem: "worker de renderização" },
         { nome: "Monitor de erros com IA", status: "dev", origem: "error-monitor" },
       ],
+      [
+        { nome: "Edição de fotolivro", status: "ok", origem: "planilha de controle" },
+        { nome: "Funil de álbuns (aprovação · gráfica)", status: "ok", origem: "Apps Script" },
+      ],
     ],
   },
   {
-    id: "vendas",
-    nome: "Vendas",
-    sub: "painel · Pronet · estúdio",
+    id: "comercial",
+    nome: "Comercial",
+    sub: "painel · Pronet · vendas",
     cor: "#EF4444",
     icon: Wallet,
     to: "/vendas",
     ramos: [
       [
         { nome: "Painel de vendas", status: "ok", to: "/vendas" },
-        { nome: "P4F / Sessão estúdio", status: "ok", to: "/p4f" },
         { nome: "Agendados × compraram", status: "ok", to: "/vendas" },
       ],
       [
