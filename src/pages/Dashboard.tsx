@@ -9,6 +9,7 @@ import {
   Camera,
   Receipt,
   TrendingUp,
+  Clapperboard,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +22,7 @@ const MODULES: { to: string; label: string; icon: LucideIcon; desc: string }[] =
   { to: "/sdr", label: "SDR (Agente de IA)", icon: Bot, desc: "Qualificação e primeiro contato automatizado." },
   { to: "/financeiro", label: "Financeiro (Contas a Receber)", icon: Landmark, desc: "Parcelas a receber, inadimplência e cobrança." },
   { to: "/producao", label: "Produção (Itens Vendidos)", icon: GalleryHorizontalEnd, desc: "Status de produção dos itens vendidos." },
+  { to: "/edicao", label: "Edição (Convites, Vídeos e Álbuns)", icon: Clapperboard, desc: "Produção do ano corrente e funil de aprovação de álbuns." },
   { to: "/p4f", label: "P4F / Sessão Estúdio", icon: Camera, desc: "Visão filtrada por unidade — Porto Alegre, Caxias, Novo Hamburgo." },
   { to: "/contas-pagar", label: "Contas a Pagar", icon: Receipt, desc: "Orçamento e contas a pagar da operação." },
   { to: "/lucro", label: "Lucro por Contrato", icon: TrendingUp, desc: "Margem por contrato — receita menos custos." },

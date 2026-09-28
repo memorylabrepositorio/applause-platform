@@ -157,6 +157,7 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
     sub: "convites · vídeos · álbuns",
     cor: "#38BDF8",
     icon: Clapperboard,
+    to: "/edicao",
     ramos: [
       [
         { nome: "Convites (Photoshop)", status: "ok", origem: "worker de renderização" },
@@ -170,8 +171,8 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
         { nome: "Monitor de erros com IA", status: "dev", origem: "error-monitor" },
       ],
       [
-        { nome: "Edição de fotolivro", status: "ok", origem: "planilha de controle" },
-        { nome: "Funil de álbuns (aprovação · gráfica)", status: "ok", origem: "Apps Script" },
+        { nome: "Edição de fotolivro", status: "ok", origem: "planilha de controle", to: "/edicao" },
+        { nome: "Funil de álbuns (aprovação · gráfica)", status: "ok", origem: "Apps Script", to: "/edicao" },
       ],
     ],
   },

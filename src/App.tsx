@@ -15,6 +15,7 @@ const Atendimento = lazy(() => import("@/pages/Atendimento"));
 const Sdr = lazy(() => import("@/pages/Sdr"));
 const Financeiro = lazy(() => import("@/pages/Financeiro"));
 const Producao = lazy(() => import("@/pages/Producao"));
+const Edicao = lazy(() => import("@/pages/Edicao"));
 const P4F = lazy(() => import("@/pages/P4F"));
 const ContasPagar = lazy(() => import("@/pages/ContasPagar"));
 const Lucro = lazy(() => import("@/pages/Lucro"));
@@ -112,6 +113,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Producao />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/edicao"
+            element={
+              <ProtectedRoute>
+                <Edicao />
               </ProtectedRoute>
             }
           />
