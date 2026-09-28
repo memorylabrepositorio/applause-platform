@@ -68,7 +68,7 @@ export default function Mapa() {
 
   const irParaDept = useCallback((i: number, abrirDireto = false) => {
     const sw = swiperRef.current;
-    if (sw) sw.slideTo(i);
+    if (sw) sw.slideToLoop(i);
     setFocoIdx(i);
     if (abrirDireto) setExpandido(true);
   }, []);
@@ -216,14 +216,15 @@ export default function Mapa() {
                 effect="coverflow"
                 grabCursor
                 centeredSlides
-                initialSlide={focoInicial}
+                loop
                 slidesPerView="auto"
                 coverflowEffect={{ rotate: 28, stretch: 0, depth: 140, modifier: 1, slideShadows: false }}
                 pagination={{ clickable: true, el: ".mapa-pontinhos" }}
                 onSwiper={(sw) => {
                   swiperRef.current = sw;
+                  sw.slideToLoop(focoInicial, 0, false);
                 }}
-                onSlideChange={(sw) => setFocoIdx(sw.activeIndex)}
+                onSlideChange={(sw) => setFocoIdx(sw.realIndex)}
                 className="mapa-swiper"
               >
                 {depts.map((d, i) => {
