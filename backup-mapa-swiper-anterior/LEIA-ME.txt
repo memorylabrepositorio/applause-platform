@@ -1,0 +1,9 @@
+Backup da versão "carrossel de esferas de vidro" do Mapa (rejeitada pelo
+usuário por qualidade visual - gradientes CSS artesanais "pareciam feitos
+no paint"). Guardado antes de substituir por Swiper.js (EffectCoverflow)
++ grade de cards para o estado expandido.
+
+Pra restaurar:
+  cp backup-mapa-swiper-anterior/Mapa.tsx.bak src/pages/Mapa.tsx
+  cp backup-mapa-swiper-anterior/Mapa.css.bak src/pages/Mapa.css
+  cp backup-mapa-swiper-anterior/carrossel.ts.bak src/lib/mapa/carrossel.ts

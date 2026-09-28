@@ -115,159 +115,100 @@
 .mapa-busca-vazio { padding: 10px; font-size: 12px; color: rgb(var(--m-texto-3)); text-align: center; }
 
 /* ---------------------------------------------------------------------
-   palco — uma "moldura" de referência fixa (REFERENCIA em carrossel.ts),
-   centralizada e escalada pra caber na área visível. Tudo dentro dela
-   usa coordenadas relativas ao próprio centro da moldura.
+   palco — carrossel Swiper.js (efeito coverflow oficial) em modo compacto,
+   e grade simples de cards pro estado expandido de um departamento.
    --------------------------------------------------------------------- */
-.mapa-viewport { position: absolute; inset: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-.mapa-quadro {
-  position: relative; width: 1400px; height: 900px; flex-shrink: 0;
-  transition: transform 0.35s ease;
+.mapa-viewport { position: absolute; inset: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 0 16px; }
+
+.mapa-carrossel-caixa { position: relative; width: 100%; max-width: 1100px; }
+.mapa-ambiente {
+  position: absolute; inset: -30% -10%; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse 46% 55% at 50% 54%, color-mix(in srgb, var(--c) 13%, transparent), transparent 70%);
+  transition: background 0.6s ease;
 }
 
-/* ---------- anel do carrossel ---------- */
-.mapa-anel-caixa { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; perspective: 2000px; }
-.mapa-anel { position: relative; width: 100%; height: 460px; transform-style: preserve-3d; }
+.mapa-swiper { width: 100%; padding: 10px 0 6px; }
+.mapa-swiper .swiper-slide { width: 168px; height: 220px; }
 
-.mapa-esfera {
-  position: absolute; left: 50%; top: 50%; width: 190px; height: 190px; margin: -95px 0 0 -95px;
-  padding: 0; border: 0; background: none; transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(0.22, 0.75, 0.24, 1), opacity 0.6s ease, filter 0.6s ease;
+.mapa-card {
+  width: 100%; height: 100%; padding: 0; border: 0; border-radius: 18px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 20%, transparent), var(--m-vidro));
+  border: 1px solid color-mix(in srgb, var(--c) 35%, var(--m-linha));
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
-.mapa-esfera .rosto {
-  position: absolute; inset: 0; border-radius: 50%; z-index: 3;
-  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
-  transform: rotateX(-23deg); /* contragira — cancela a inclinação do anel, a esfera sempre encara a câmera */
+.mapa-card-icone {
+  width: 54px; height: 54px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgb(6 8 15 / 0.55); border: 2px solid var(--c);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--c) 45%, transparent);
+  color: var(--c);
 }
-.mapa-esfera .halo {
-  position: absolute; inset: -38%; border-radius: 50%; z-index: 0; pointer-events: none;
-  background: radial-gradient(circle, color-mix(in srgb, var(--c) var(--glow, 22%), transparent), transparent 68%);
-  filter: blur(6px);
+.mapa-card-icone svg { width: 24px; height: 24px; }
+.mapa-card-nome { font-family: var(--m-display); font-size: 14.5px; color: rgb(var(--m-texto)); letter-spacing: 0.03em; text-align: center; padding: 0 10px; }
+.mapa-card-sub { font-size: 10px; color: rgb(var(--m-texto-3)); letter-spacing: 0.02em; text-align: center; padding: 0 12px; }
+.mapa-card.ativo {
+  border-color: color-mix(in srgb, var(--c) 70%, transparent);
+  box-shadow: 0 0 32px color-mix(in srgb, var(--c) 30%, transparent);
 }
-.mapa-esfera .corpo {
-  position: absolute; inset: 0; border-radius: 50%; z-index: 1; overflow: hidden; pointer-events: none;
-  background:
-    radial-gradient(circle at 30% 22%, rgb(255 255 255 / 0.65), rgb(255 255 255 / 0) 32%),
-    radial-gradient(circle at 68% 78%, color-mix(in srgb, var(--c) 60%, transparent), transparent 62%),
-    linear-gradient(155deg, color-mix(in srgb, var(--c) 34%, transparent) 0%, color-mix(in srgb, var(--c) 10%, transparent) 50%, rgb(8 10 18 / 0.6) 100%);
-  border: 1px solid color-mix(in srgb, var(--c) 45%, rgb(255 255 255 / 0.35));
-  box-shadow:
-    inset 0 1.5px 2px rgb(255 255 255 / 0.55),
-    inset 0 -18px 30px -8px color-mix(in srgb, var(--c) 50%, transparent),
-    inset 0 0 26px color-mix(in srgb, var(--c) 22%, transparent);
-  backdrop-filter: blur(3px);
-  transition: box-shadow 0.3s ease;
-}
-.mapa-esfera .veu {
-  position: absolute; inset: 0; border-radius: 50%; z-index: 2; pointer-events: none;
-  background: linear-gradient(200deg, rgb(255 255 255 / 0.16), transparent 40%);
-  mix-blend-mode: screen;
-}
-.mapa-esfera .anel-fino {
-  position: absolute; inset: -6px; border-radius: 50%; z-index: 0; pointer-events: none;
-  border: 1px solid color-mix(in srgb, var(--c) 30%, transparent); opacity: 0.5;
-}
-.mapa-esfera .rosto svg {
-  position: relative; width: 42px; height: 42px; color: #fff;
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c) 85%, transparent));
-  opacity: 0.92;
-}
-.mapa-esfera .nome {
-  position: relative; font-family: var(--m-display); font-size: 14.5px; color: #fff;
-  text-shadow: 0 2px 10px rgb(0 0 0 / 0.65); letter-spacing: 0.02em;
-  opacity: 0; transition: opacity 0.3s ease; white-space: nowrap;
-}
-.mapa-esfera.foco { cursor: pointer; }
-.mapa-esfera.foco .nome { opacity: 1; }
-.mapa-esfera.foco .corpo {
-  box-shadow:
-    inset 0 1.5px 2px rgb(255 255 255 / 0.6),
-    inset 0 -20px 34px -8px color-mix(in srgb, var(--c) 60%, transparent),
-    inset 0 0 34px color-mix(in srgb, var(--c) 30%, transparent);
-}
-.mapa-esfera:hover:not(.foco) .corpo { box-shadow: inset 0 1.5px 2px rgb(255 255 255 / 0.6), inset 0 -18px 30px -8px color-mix(in srgb, var(--c) 62%, transparent), inset 0 0 30px color-mix(in srgb, var(--c) 28%, transparent); }
+.mapa-card.ativo .mapa-card-nome { color: #fff; }
 
-/* legenda do setor em foco, embaixo do anel */
-.mapa-setor-sub { position: absolute; left: 0; right: 0; bottom: 21%; z-index: 6; display: flex; justify-content: center; }
+/* legenda do setor em foco, embaixo do carrossel */
+.mapa-setor-sub { position: absolute; left: 0; right: 0; bottom: 21%; z-index: 6; display: flex; justify-content: center; pointer-events: none; }
 .mapa-setor-sub button {
   background: none; border: 0; font-size: 12.5px; letter-spacing: 0.22em; text-transform: uppercase;
-  color: rgb(var(--m-texto-3)); font-family: var(--m-display);
+  color: rgb(var(--m-texto-3)); font-family: var(--m-display); pointer-events: auto;
 }
 .mapa-setor-sub button:hover { color: rgb(var(--m-texto)); }
 
-.mapa-navs { position: absolute; left: 0; right: 0; bottom: 9%; z-index: 20; display: flex; justify-content: center; gap: 30px; }
+.mapa-navs {
+  position: absolute; left: 50%; bottom: 9%; z-index: 20; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 999px;
+}
 .mapa-nav-btn {
-  width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  background: var(--m-vidro); backdrop-filter: blur(8px); border: 1px solid var(--m-linha); color: rgb(var(--m-texto-2));
-  transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; color: rgb(var(--m-texto-2));
+  transition: color 0.2s, background 0.2s, box-shadow 0.2s;
 }
-.mapa-nav-btn:hover { color: rgb(var(--m-texto)); }
+.mapa-nav-btn:hover { color: rgb(var(--m-texto)); background: rgb(255 255 255 / 0.06); }
 .mapa-nav-btn.ativo {
-  border-color: color-mix(in srgb, var(--c) 60%, transparent);
-  box-shadow: 0 0 20px color-mix(in srgb, var(--c) 40%, transparent);
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--c) 38%, transparent);
 }
+.mapa-nav-btn.ativo:hover { background: color-mix(in srgb, var(--c) 22%, transparent); }
 .mapa-nav-btn.ativo .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
 
+/* bolinhas de paginação — controladas pelo próprio Swiper (módulo Pagination),
+   só restilizadas pra bater com o resto do painel */
 .mapa-pontinhos { position: absolute; left: 0; right: 0; bottom: 4%; z-index: 20; display: flex; justify-content: center; gap: 7px; }
-.mapa-pontinhos button { width: 5px; height: 5px; padding: 0; border: 0; border-radius: 50%; background: rgb(var(--m-texto-3)); opacity: 0.4; transition: all 0.25s ease; }
-.mapa-pontinhos button.on { opacity: 1; background: rgb(var(--m-texto)); width: 16px; border-radius: 3px; }
+.mapa-pontinhos .swiper-pagination-bullet {
+  width: 5px; height: 5px; margin: 0; border-radius: 50%; background: rgb(var(--m-texto-3)); opacity: 0.4;
+  transition: all 0.25s ease; display: inline-block; cursor: pointer;
+}
+.mapa-pontinhos .swiper-pagination-bullet-active { opacity: 1; background: rgb(var(--m-texto)); width: 16px; border-radius: 3px; }
 
-/* ---------- estado expandido: constelação de funções do setor ---------- */
-.mapa-exp-caixa { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
-.mapa-exp-fundo {
-  position: absolute; left: -700px; top: -450px; width: 1400px; height: 900px; z-index: -1;
-  background: radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--c) 15%, transparent), transparent 62%);
+/* ---------- estado expandido: grade de funções do setor ---------- */
+.mapa-grade-caixa {
+  width: 100%; max-width: 1160px; height: 100%; padding: 76px 8px 24px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;
+  align-content: start; overflow-y: auto;
 }
-.mapa-exp-svg { position: absolute; left: -700px; top: -450px; overflow: visible; pointer-events: none; }
-
-.mapa-exp-esfera {
-  position: absolute; left: 0; top: 0; width: 232px; height: 232px; margin: -116px 0 0 -116px;
-  border-radius: 50%; overflow: hidden;
-  display: flex; align-items: center; justify-content: center;
-}
-.mapa-exp-esfera .halo {
-  position: absolute; inset: -30%; border-radius: 50%; z-index: 0; pointer-events: none;
-  background: radial-gradient(circle, color-mix(in srgb, var(--c) 46%, transparent), transparent 68%);
-  filter: blur(10px);
-}
-.mapa-exp-esfera .corpo {
-  position: absolute; inset: 0; border-radius: 50%; z-index: 1;
-  background:
-    radial-gradient(circle at 30% 22%, rgb(255 255 255 / 0.6), rgb(255 255 255 / 0) 34%),
-    radial-gradient(circle at 68% 78%, color-mix(in srgb, var(--c) 55%, transparent), transparent 64%),
-    linear-gradient(155deg, color-mix(in srgb, var(--c) 32%, transparent) 0%, color-mix(in srgb, var(--c) 10%, transparent) 50%, rgb(8 10 18 / 0.6) 100%);
-  border: 1.5px solid color-mix(in srgb, var(--c) 55%, rgb(255 255 255 / 0.32));
-  box-shadow:
-    inset 0 2px 3px rgb(255 255 255 / 0.5),
-    inset 0 -26px 44px -10px color-mix(in srgb, var(--c) 55%, transparent),
-    inset 0 0 40px color-mix(in srgb, var(--c) 26%, transparent),
-    0 0 110px color-mix(in srgb, var(--c) 40%, transparent);
-  backdrop-filter: blur(3px);
-}
-.mapa-exp-esfera .veu {
-  position: absolute; inset: 0; border-radius: 50%; z-index: 2; pointer-events: none;
-  background: linear-gradient(200deg, rgb(255 255 255 / 0.14), transparent 40%);
-  mix-blend-mode: screen;
-}
-.mapa-exp-esfera .rosto { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.mapa-exp-esfera .rosto svg { width: 50px; height: 50px; color: #fff; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c) 85%, transparent)); }
-.mapa-exp-esfera .nome { font-family: var(--m-display); font-size: 18px; color: #fff; text-shadow: 0 2px 10px rgb(0 0 0 / 0.6); letter-spacing: 0.02em; }
-
-.mapa-bloco {
-  position: absolute; width: 208px; padding: 12px 15px; border-radius: 13px; text-align: left;
+.mapa-func {
+  width: 100%; padding: 14px 16px; border-radius: 13px; text-align: left;
   background: var(--m-vidro); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--m-linha); transform: translate(-50%, -50%);
+  border: 1px solid var(--m-linha);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
-.mapa-bloco:not(.link) { cursor: default; }
-.mapa-bloco:hover,
-.mapa-bloco.destaque { transform: translate(-50%, -50%) scale(1.045); border-color: color-mix(in srgb, var(--c) 55%, transparent); }
-.mapa-bloco.destaque { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), 0 0 28px color-mix(in srgb, var(--c) 45%, transparent); animation: mapa-pulso 1.1s ease-in-out 2; }
+.mapa-func:not(.link) { cursor: default; }
+.mapa-func:hover,
+.mapa-func.destaque { transform: scale(1.02); border-color: color-mix(in srgb, var(--c) 55%, transparent); }
+.mapa-func.destaque { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), 0 0 28px color-mix(in srgb, var(--c) 45%, transparent); animation: mapa-pulso 1.1s ease-in-out 2; }
 @keyframes mapa-pulso { 50% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 75%, transparent), 0 0 42px color-mix(in srgb, var(--c) 65%, transparent); } }
-.mapa-bloco .n { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgb(var(--m-texto)); line-height: 1.3; }
-.mapa-bloco .n i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); flex-shrink: 0; }
-.mapa-bloco .n i.dev { background: transparent; border: 1.3px solid rgb(var(--m-texto-3)); box-shadow: none; }
-.mapa-bloco .o { display: block; margin-top: 4px; margin-left: 15px; font-size: 10.5px; color: rgb(var(--m-texto-3)); }
+.mapa-func .n { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgb(var(--m-texto)); line-height: 1.3; }
+.mapa-func .n i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); flex-shrink: 0; }
+.mapa-func .n i.dev { background: transparent; border: 1.3px solid rgb(var(--m-texto-3)); box-shadow: none; }
+.mapa-func .o { display: block; margin-top: 6px; margin-left: 15px; font-size: 10.5px; color: rgb(var(--m-texto-3)); }
 
 .mapa-trilha {
   height: 34px; padding: 0 14px; border-radius: 9px; min-width: 0; flex-shrink: 1;
@@ -285,6 +226,8 @@
   .mapa-trilha .pref { display: none; }
   .mapa-voltar .txt { display: none; }
   .mapa-voltar { width: 34px; padding: 0; justify-content: center; }
+  .mapa-swiper .swiper-slide { width: 138px; height: 190px; }
+  .mapa-grade-caixa { padding-top: 68px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
 }
 
 /* legenda */
@@ -300,5 +243,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mapa-estrela { animation: none; }
-  .mapa-quadro, .mapa-esfera { transition: none; }
+  .mapa-card, .mapa-func { transition: none; }
 }
