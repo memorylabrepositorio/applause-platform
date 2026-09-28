@@ -2,57 +2,60 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Search } from "lucide-react";
 import Layout from "@/components/Layout";
-import { DEPARTAMENTOS, MAPA_FOCO_INICIAL, MAPA_NUCLEO, type MapaDepartamento, type MapaFuncao } from "@/lib/mapa/data";
-import { construirMapa, MAPA_EXTENSAO, type Pt, type Seg } from "@/lib/mapa/layout";
+import { DEPARTAMENTOS, type MapaDepartamento, type MapaFuncao } from "@/lib/mapa/data";
+import { construirAnel, construirFoco, INCLINACAO, REFERENCIA } from "@/lib/mapa/carrossel";
 import "./Mapa.css";
 
-const d = (s: Seg) => `M ${s.a[0].toFixed(2)} ${s.a[1].toFixed(2)} L ${s.b[0].toFixed(2)} ${s.b[1].toFixed(2)}`;
-const at = (p: Pt): CSSProperties => ({ left: `${p[0].toFixed(2)}px`, top: `${p[1].toFixed(2)}px` });
+const at = ([x, y]: [number, number]): CSSProperties => ({
+  left: `calc(50% + ${x.toFixed(2)}px)`,
+  top: `calc(50% + ${y.toFixed(2)}px)`,
+});
 const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-// zoom acima de 100% por padrão — o "ajuste" sozinho deixa o mapa cabendo
-// certinho no espaço, mas pequeno; isso faz ele ocupar mais tela de cara
-const ZOOM_PADRAO = 1.22;
-
-interface Dica {
-  x: number;
-  y: number;
+interface Achado {
   funcao: MapaFuncao;
   dept: MapaDepartamento;
 }
 
+// estrelas de fundo — geradas uma vez, fora do componente, pra não recalcular a cada render
+const ESTRELAS = Array.from({ length: 110 }, (_, i) => {
+  const rnd = (n: number) => ((Math.sin(i * 999 + n) + 1) / 2);
+  return {
+    left: rnd(1) * 100,
+    top: rnd(2) * 100,
+    size: rnd(3) < 0.25 ? 2 : 1,
+    delay: rnd(4) * 6,
+    dur: 4 + rnd(5) * 5,
+  };
+});
+
 export default function Mapa() {
   const navigate = useNavigate();
-  const mapa = useMemo(() => construirMapa(DEPARTAMENTOS), []);
-  const depts = mapa.depts;
-  const total = useMemo(() => depts.reduce((n, x) => n + x.dept.ramos.flat().length, 0), [depts]);
+  const depts = DEPARTAMENTOS;
+  const total = useMemo(() => depts.reduce((n, x) => n + x.ramos.flat().length, 0), [depts]);
 
-  const [focoId, setFocoId] = useState(
-    depts.some((x) => x.dept.id === MAPA_FOCO_INICIAL) ? MAPA_FOCO_INICIAL : depts[0]?.dept.id
-  );
-  const [ajuste, setAjuste] = useState(0.3);
-  const [zoom, setZoom] = useState(ZOOM_PADRAO);
+  const focoInicial = Math.max(0, depts.findIndex((x) => x.id === "comercial"));
+  const [focoIdx, setFocoIdx] = useState(focoInicial);
+  const [expandido, setExpandido] = useState(false);
   const [busca, setBusca] = useState("");
-  const [dica, setDica] = useState<Dica | null>(null);
+  const [destaque, setDestaque] = useState<string | null>(null);
   const [telaCheia, setTelaCheia] = useState(false);
-  // ao passar o mouse num departamento, os outros escurecem — só ele (ramos,
-  // rótulo, anéis) fica em destaque, tipo um "spotlight"
-  const [hoverId, setHoverId] = useState<string | null>(null);
-  const [hoverNucleo, setHoverNucleo] = useState(false);
+  const [escala, setEscala] = useState(1);
   const boxRef = useRef<HTMLDivElement>(null);
 
-  // escala "Ajustar": cabe o mapa inteiro na área visível
+  const foco = depts[focoIdx];
+  const anel = useMemo(() => construirAnel(depts, focoIdx), [depts, focoIdx]);
+  const focoLayout = useMemo(() => construirFoco(foco), [foco]);
+
+  // encolhe (ou aumenta um pouco) a cena pra caber na área visível — mesmo
+  // truque do mapa antigo, só que aplicado numa "moldura" de referência fixa
   useEffect(() => {
     const el = boxRef.current;
     if (!el) return;
-    // no celular o mapa pode "vazar" um pouco nas laterais (rótulos) pra não ficar minúsculo
-    const medir = () =>
-      setAjuste(
-        Math.min(
-          el.clientWidth / (el.clientWidth < 700 ? MAPA_EXTENSAO.largura * 0.78 : MAPA_EXTENSAO.largura),
-          el.clientHeight / MAPA_EXTENSAO.altura
-        )
-      );
+    const medir = () => {
+      const s = Math.min(el.clientWidth / REFERENCIA.largura, el.clientHeight / REFERENCIA.altura);
+      setEscala(Math.min(s, 1.2));
+    };
     medir();
     const ro = new ResizeObserver(medir);
     ro.observe(el);
@@ -65,40 +68,64 @@ export default function Mapa() {
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
 
-  const idx = Math.max(0, depts.findIndex((x) => x.dept.id === focoId));
-  const N = depts.length;
-  const foco = depts[idx]?.dept;
-  const anterior = depts[(idx - 1 + N) % N]?.dept;
-  const proximo = depts[(idx + 1) % N]?.dept;
+  const irPara = useCallback(
+    (passo: number) => setFocoIdx((i) => (i + passo + depts.length) % depts.length),
+    [depts.length]
+  );
 
-  const irPara = useCallback((passo: number) => {
-    setFocoId((atual) => {
-      const i = depts.findIndex((x) => x.dept.id === atual);
-      return depts[(i + passo + depts.length) % depts.length].dept.id;
-    });
-  }, [depts]);
+  const abrir = useCallback(
+    (funcao: MapaFuncao) => {
+      if (funcao.to) navigate(funcao.to);
+    },
+    [navigate]
+  );
 
-  // setas do teclado trocam o departamento em destaque
+  const abrirDestaque = useCallback(
+    (achado: Achado) => {
+      const i = depts.findIndex((x) => x.id === achado.dept.id);
+      if (i >= 0) setFocoIdx(i);
+      setExpandido(true);
+      setDestaque(achado.funcao.nome);
+      setBusca("");
+      if (achado.funcao.to) navigate(achado.funcao.to);
+    },
+    [depts, navigate]
+  );
+
+  // teclado: setas giram o carrossel; Esc fecha a constelação expandida ou a busca
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const alvo = e.target as HTMLElement | null;
-      if (alvo && (alvo.tagName === "INPUT" || alvo.tagName === "TEXTAREA" || alvo.isContentEditable)) return;
-      if (e.key === "ArrowLeft") irPara(-1);
-      if (e.key === "ArrowRight") irPara(1);
+      const noCampo = alvo && (alvo.tagName === "INPUT" || alvo.tagName === "TEXTAREA" || alvo.isContentEditable);
+      if (e.key === "Escape") {
+        if (expandido) setExpandido(false);
+        else if (busca) setBusca("");
+        return;
+      }
+      if (noCampo) return;
+      if (e.key === "ArrowLeft" && !expandido) irPara(-1);
+      if (e.key === "ArrowRight" && !expandido) irPara(1);
+      if (e.key === "Enter" && !expandido) setExpandido(true);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [irPara]);
+  }, [irPara, expandido, busca]);
+
+  // o destaque de busca some sozinho depois de um tempo
+  useEffect(() => {
+    if (!destaque) return;
+    const t = setTimeout(() => setDestaque(null), 3200);
+    return () => clearTimeout(t);
+  }, [destaque]);
 
   const termo = semAcento(busca.trim());
-  const achados = useMemo(() => {
-    if (!termo) return [] as MapaFuncao[];
-    return depts.flatMap((x) => x.dept.ramos.flat()).filter((f) => semAcento(f.nome).includes(termo));
+  const achados = useMemo<Achado[]>(() => {
+    if (!termo) return [];
+    return depts
+      .flatMap((dept) => dept.ramos.flat().map((funcao) => ({ funcao, dept })))
+      .filter((a) => semAcento(a.funcao.nome).includes(termo))
+      .slice(0, 8);
   }, [termo, depts]);
-
-  function abrir(funcao: MapaFuncao) {
-    if (funcao.to) navigate(funcao.to);
-  }
 
   function telaCheiaToggle() {
     const el = boxRef.current;
@@ -107,13 +134,16 @@ export default function Mapa() {
     else el.requestFullscreen?.().catch(() => undefined);
   }
 
-  const escala = ajuste * zoom;
+  function cliqueEsfera(item: ReturnType<typeof construirAnel>[number]) {
+    if (item.emFoco) setExpandido(true);
+    else setFocoIdx(depts.findIndex((x) => x.id === item.dept.id));
+  }
 
   return (
     <Layout>
       <div className="mapa" ref={boxRef}>
         <div className="mapa-estrelas" aria-hidden="true">
-          {mapa.estrelas.map((s, i) => (
+          {ESTRELAS.map((s, i) => (
             <span
               key={i}
               className="mapa-estrela"
@@ -133,219 +163,178 @@ export default function Mapa() {
           <button type="button" className="mapa-vidro mapa-btn" onClick={telaCheiaToggle} aria-label="Alternar tela cheia">
             {telaCheia ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
           </button>
-          <label className="mapa-vidro mapa-busca">
-            <Search size={15} />
-            <input
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && achados.length === 1) abrir(achados[0]);
-                if (e.key === "Escape") setBusca("");
-              }}
-              placeholder={`buscar ${total} funções · SDR, convites, Pronet, álbuns…`}
-              aria-label="Buscar funções no mapa"
-              autoComplete="off"
-              spellCheck={false}
-            />
-            {termo && <span className="mapa-busca-n">{achados.length}</span>}
-          </label>
-          <span className="mapa-aba">MAPA</span>
+
+          {!expandido ? (
+            <>
+              <div className="mapa-busca-caixa">
+                <label className="mapa-vidro mapa-busca">
+                  <Search size={15} />
+                  <input
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && achados.length === 1) {
+                        e.stopPropagation();
+                        abrirDestaque(achados[0]);
+                      }
+                      if (e.key === "Escape") setBusca("");
+                    }}
+                    placeholder={`buscar ${total} funções · SDR, convites, Pronet, álbuns…`}
+                    aria-label="Buscar funções no mapa"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  {termo && <span className="mapa-busca-n">{achados.length}</span>}
+                </label>
+                {termo && (
+                  <div className="mapa-busca-lista mapa-vidro">
+                    {achados.length === 0 && <div className="mapa-busca-vazio">nada encontrado</div>}
+                    {achados.map((a) => (
+                      <button key={a.funcao.nome} type="button" onClick={() => abrirDestaque(a)}>
+                        <i style={{ "--c": a.dept.cor } as CSSProperties} className={a.funcao.status} />
+                        <span className="nm">{a.funcao.nome}</span>
+                        <span className="dp">{a.dept.nome}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <span className="mapa-aba">MAPA</span>
+            </>
+          ) : (
+            <>
+              <div className="mapa-trilha mapa-vidro">
+                <span className="pref">Mapa geral <ChevronRight size={12} /></span>
+                <b style={{ color: foco.cor }}>{foco.nome}</b>
+              </div>
+              <button type="button" className="mapa-vidro mapa-voltar" onClick={() => setExpandido(false)}>
+                <span className="txt">voltar pro carrossel</span>
+                <span aria-hidden="true">×</span>
+              </button>
+            </>
+          )}
         </div>
 
         <div className="mapa-viewport">
-          <div
-            className={`mapa-palco${termo ? " buscando" : ""}`}
-            style={{ transform: `translate(0px, 30px) scale(${escala})` }}
-          >
-            <svg className={`mapa-svg${hoverId ? " apagando" : ""}`} width={3200} height={3200} viewBox="-1600 -1600 3200 3200" aria-hidden="true">
-              <circle r={168} className="mapa-anel" strokeDasharray="2 9" />
-              <circle r={236} className="mapa-anel" strokeDasharray="1 6" />
-
-              {depts.map((x) => (
-                <g key={x.dept.id} className={`mapa-svg-dept${hoverId && hoverId !== x.dept.id ? " apagado" : ""}`}>
-                  <path d={d(x.raio)} className="mapa-raio" />
-                  {x.juncoes.map((j, k) => (
-                    <circle key={k} cx={j[0]} cy={j[1]} r={1.8} className="mapa-juncao" />
-                  ))}
-                  <circle r={2.4} className="mapa-mote">
-                    <animateMotion dur={`${x.motes.durIda.toFixed(2)}s`} begin={`${x.motes.beginIda.toFixed(2)}s`} repeatCount="indefinite" path={x.motes.ida} />
-                  </circle>
-                  <circle r={1.7} className="mapa-mote claro">
-                    <animateMotion dur={`${x.motes.durVolta.toFixed(2)}s`} begin={`${x.motes.beginVolta.toFixed(2)}s`} repeatCount="indefinite" path={x.motes.volta} />
-                  </circle>
-                </g>
-              ))}
-
-              <g className="mapa-cerebro">
-                {mapa.nucleo.arestas.map((a, i) => (
-                  <path
-                    key={i}
-                    d={d(a.seg)}
-                    className="mapa-cerebro-aresta"
-                    strokeOpacity={a.opacidade}
-                    strokeDasharray={a.tracejada ? "1.5 3" : undefined}
-                  />
-                ))}
-                {mapa.nucleo.pontos.map((p, i) => (
-                  <circle key={i} cx={p.pos[0]} cy={p.pos[1]} r={p.r} fill={p.cor ?? "currentColor"} opacity={p.opacidade} />
-                ))}
-                <g
-                  className={`mapa-nucleo-grupo${hoverNucleo ? " hover" : ""}`}
-                  style={{ transformOrigin: `${mapa.nucleo.nucleo[0]}px ${mapa.nucleo.nucleo[1]}px` } as CSSProperties}
-                  onMouseEnter={() => setHoverNucleo(true)}
-                  onMouseLeave={() => setHoverNucleo(false)}
-                >
-                  <circle className="mapa-nucleo" cx={mapa.nucleo.nucleo[0]} cy={mapa.nucleo.nucleo[1]} r={5.85} />
-                  <circle cx={mapa.nucleo.satelite[0]} cy={mapa.nucleo.satelite[1]} r={4.4} fill="currentColor" />
-                  {/* área de toque maior — o ponto visível é pequeno demais pra passar o mouse com precisão */}
-                  <circle
-                    cx={mapa.nucleo.nucleo[0]}
-                    cy={mapa.nucleo.nucleo[1]}
-                    r={34}
-                    fill="transparent"
-                    className="mapa-nucleo-alvo"
-                  />
-                </g>
-              </g>
-
-              {depts.map((x) => (
-                <g
-                  key={x.dept.id}
-                  stroke={x.dept.cor}
-                  className={`mapa-svg-dept${hoverId && hoverId !== x.dept.id ? " apagado" : ""}`}
-                >
-                  {x.ramos.map((r, k) => (
-                    <g key={k}>
-                      <path d={d(r.stub)} className="mapa-aresta tracejada" />
-                      {r.arestas.map((a, j) => (
-                        <path key={j} d={d(a)} className="mapa-aresta" />
-                      ))}
-                      <circle cx={r.juncao[0]} cy={r.juncao[1]} r={5} fill={x.dept.cor} stroke="none" opacity={0.9} />
-                    </g>
-                  ))}
-                </g>
-              ))}
-            </svg>
-
-            <div className={`mapa-nucleo-nome${hoverId ? " apagado" : ""}`}>
-              {MAPA_NUCLEO.nome}
-              <small>{MAPA_NUCLEO.sub}</small>
-            </div>
-
-            {depts.map((x) => {
-              const Icon = x.dept.icon;
-              const emFoco = x.dept.id === focoId;
-              const emHover = x.dept.id === hoverId;
-              return (
-                <div
-                  key={x.dept.id}
-                  className={`mapa-dept${emFoco ? " foco" : ""}${emHover ? " hover" : ""}${
-                    hoverId && !emHover ? " apagado" : ""
-                  }`}
-                  style={{ "--c": x.dept.cor } as CSSProperties}
-                  onMouseEnter={() => setHoverId(x.dept.id)}
-                  onMouseLeave={() => setHoverId(null)}
-                >
-                  <button
-                    type="button"
-                    className="mapa-badge"
-                    style={at(x.badge)}
-                    onClick={() => (emFoco && x.dept.to ? navigate(x.dept.to) : setFocoId(x.dept.id))}
-                    aria-label={emFoco && x.dept.to ? `Abrir ${x.dept.nome}` : `Destacar ${x.dept.nome}`}
-                    title={emFoco && x.dept.to ? `Abrir ${x.dept.nome}` : x.dept.nome}
-                  >
-                    <Icon strokeWidth={1.5} />
-                  </button>
-
-                  {x.ramos.flatMap((r) => r.pontos).map((p) => {
-                    const hit = !!termo && semAcento(p.funcao.nome).includes(termo);
+          <div className="mapa-quadro" style={{ transform: `scale(${escala})` }}>
+            {!expandido ? (
+              <div className="mapa-anel-caixa">
+                <div className="mapa-anel" style={{ transform: `rotateX(${INCLINACAO}deg)` }}>
+                  {anel.map((item) => {
+                    const Icon = item.dept.icon;
                     return (
                       <button
-                        key={p.funcao.nome}
                         type="button"
-                        className={`mapa-ponto ${p.funcao.status}${hit ? " hit" : ""}${p.funcao.to ? " link" : ""}`}
-                        style={{ ...at(p.pos), animationDelay: `${p.delay.toFixed(2)}s` }}
-                        aria-label={`${p.funcao.nome} — ${p.funcao.status === "ok" ? "em produção" : "em desenvolvimento"}`}
-                        onClick={() => abrir(p.funcao)}
-                        onMouseEnter={(e) => {
-                          const r = e.currentTarget.getBoundingClientRect();
-                          setDica({ x: r.left + r.width / 2, y: r.top, funcao: p.funcao, dept: x.dept });
-                        }}
-                        onMouseLeave={() => setDica(null)}
-                        onFocus={(e) => {
-                          const r = e.currentTarget.getBoundingClientRect();
-                          setDica({ x: r.left + r.width / 2, y: r.top, funcao: p.funcao, dept: x.dept });
-                        }}
-                        onBlur={() => setDica(null)}
-                      />
+                        key={item.dept.id}
+                        className={`mapa-esfera${item.emFoco ? " foco" : ""}`}
+                        style={
+                          {
+                            "--c": item.dept.cor,
+                            "--glow": item.emFoco ? "58%" : "16%",
+                            transform: `translate3d(${item.x.toFixed(1)}px, 0, ${item.z.toFixed(1)}px) scale(${item.escala.toFixed(3)})`,
+                            opacity: item.opacidade,
+                            filter: item.blur ? `blur(${item.blur.toFixed(1)}px)` : undefined,
+                            zIndex: item.zIndex,
+                          } as CSSProperties
+                        }
+                        onClick={() => cliqueEsfera(item)}
+                        aria-label={item.emFoco ? `Abrir ${item.dept.nome}` : `Destacar ${item.dept.nome}`}
+                        title={item.emFoco ? `Abrir ${item.dept.nome}` : item.dept.nome}
+                      >
+                        <span className="halo" />
+                        <span className="anel-fino" />
+                        <span className="corpo" />
+                        <span className="veu" />
+                        <span className="rosto">
+                          <Icon strokeWidth={1.5} />
+                          <span className="nome">{item.dept.nome}</span>
+                        </span>
+                      </button>
                     );
                   })}
-
-                  <div className="mapa-rotulo" style={at(x.rotulo)}>
-                    <div className="nm">{x.dept.nome}</div>
-                    <div className="sb">{x.dept.sub}</div>
-                  </div>
                 </div>
-              );
-            })}
+              </div>
+            ) : (
+              <div className="mapa-exp-caixa">
+                <div className="mapa-exp-fundo" style={{ "--c": foco.cor } as CSSProperties} />
+                <svg className="mapa-exp-svg" width={REFERENCIA.largura} height={REFERENCIA.altura} viewBox={`${-REFERENCIA.largura / 2} ${-REFERENCIA.altura / 2} ${REFERENCIA.largura} ${REFERENCIA.altura}`} aria-hidden="true">
+                  {focoLayout.blocos.map((b, i) => (
+                    <line key={i} x1={0} y1={0} x2={b.pos[0]} y2={b.pos[1]} stroke={foco.cor} strokeWidth={1.2} strokeOpacity={0.35} />
+                  ))}
+                </svg>
+
+                <div className="mapa-exp-esfera" style={{ "--c": foco.cor } as CSSProperties}>
+                  <span className="halo" />
+                  <span className="corpo" />
+                  <span className="veu" />
+                  <span className="rosto">
+                    <foco.icon strokeWidth={1.4} />
+                    <span className="nome">{foco.nome}</span>
+                  </span>
+                </div>
+
+                {focoLayout.blocos.map((b) => (
+                  <button
+                    type="button"
+                    key={b.funcao.nome}
+                    className={`mapa-bloco${destaque === b.funcao.nome ? " destaque" : ""}${b.funcao.to ? " link" : ""}`}
+                    style={{ ...at(b.pos), "--c": foco.cor } as CSSProperties}
+                    onClick={() => abrir(b.funcao)}
+                  >
+                    <span className="n">
+                      <i className={b.funcao.status === "dev" ? "dev" : ""} />
+                      {b.funcao.nome}
+                    </span>
+                    {b.funcao.origem && <span className="o">{b.funcao.origem}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {anterior && (
-          <button type="button" className="mapa-borda esq" onClick={() => irPara(-1)} aria-label={anterior.nome}>
-            <ChevronLeft size={14} />
-            <span>{anterior.nome}</span>
-          </button>
-        )}
-        {proximo && (
-          <button type="button" className="mapa-borda dir" onClick={() => irPara(1)} aria-label={proximo.nome}>
-            <span>{proximo.nome}</span>
-            <ChevronRight size={14} />
-          </button>
-        )}
+        {!expandido ? (
+          <>
+            <div className="mapa-setor-sub">
+              <button type="button" onClick={() => setExpandido(true)}>
+                {foco.nome}
+              </button>
+            </div>
+            <div className="mapa-navs">
+              <button type="button" className="mapa-nav-btn" onClick={() => irPara(-1)} aria-label="Departamento anterior">
+                <ChevronLeft size={17} strokeWidth={1.6} />
+              </button>
+              <button
+                type="button"
+                className="mapa-nav-btn ativo"
+                style={{ "--c": foco.cor } as CSSProperties}
+                onClick={() => setExpandido(true)}
+                aria-label={`Abrir ${foco.nome}`}
+              >
+                <span className="ponto" />
+              </button>
+              <button type="button" className="mapa-nav-btn" onClick={() => irPara(1)} aria-label="Próximo departamento">
+                <ChevronRight size={17} strokeWidth={1.6} />
+              </button>
+            </div>
+            <div className="mapa-pontinhos">
+              {depts.map((d, i) => (
+                <button
+                  type="button"
+                  key={d.id}
+                  className={i === focoIdx ? "on" : ""}
+                  aria-label={d.nome}
+                  onClick={() => setFocoIdx(i)}
+                />
+              ))}
+            </div>
+          </>
+        ) : null}
 
-        {foco && (
-          <div className="mapa-foco">
-            <button type="button" className="seta" style={{ left: "calc(50% - 215px)" }} onClick={() => irPara(-1)} aria-label="Departamento anterior">
-              <ChevronLeft size={22} strokeWidth={1.5} />
-            </button>
-            <button
-              type="button"
-              className="nome"
-              onClick={() => foco.to && navigate(foco.to)}
-              disabled={!foco.to}
-              title={foco.to ? `Abrir ${foco.nome}` : undefined}
-            >
-              {foco.nome}
-            </button>
-            <button type="button" className="seta" style={{ right: "calc(50% - 215px)" }} onClick={() => irPara(1)} aria-label="Próximo departamento">
-              <ChevronRight size={22} strokeWidth={1.5} />
-            </button>
-          </div>
-        )}
-
-        <div className="mapa-vidro mapa-legenda">
-          <span><i />Em produção</span>
-          <span><i className="vazado" />Em desenvolvimento</span>
-        </div>
-
-        <div className="mapa-vidro mapa-zoom">
-          <button type="button" onClick={() => setZoom((z) => Math.max(z / 1.2, 0.5))} aria-label="Diminuir zoom">−</button>
-          <span className="pct">{Math.round(escala * 100)}%</span>
-          <button type="button" onClick={() => setZoom((z) => Math.min(z * 1.2, 4))} aria-label="Aumentar zoom">+</button>
-          <button type="button" className="ajustar" onClick={() => setZoom(ZOOM_PADRAO)}>Ajustar</button>
-        </div>
-
-        {dica && (
-          <div className="mapa-dica" style={{ left: dica.x, top: dica.y }} role="tooltip">
-            <b>{dica.funcao.nome}</b>
-            <span className={`st ${dica.funcao.status}`}>
-              {dica.funcao.status === "ok" ? "em produção" : "em desenvolvimento"}
-            </span>
-            <span className="meta">
-              {dica.dept.nome}
-              {dica.funcao.to ? " · clique para abrir" : dica.funcao.origem ? ` · roda em ${dica.funcao.origem}` : ""}
-            </span>
+        {!expandido && (
+          <div className="mapa-vidro mapa-legenda">
+            <span><i />Em produção</span>
+            <span><i className="vazado" />Em desenvolvimento</span>
           </div>
         )}
       </div>

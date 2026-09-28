@@ -1,0 +1,11 @@
+Backup do Mapa ANTES de implementar o carrossel de esferas 3D (setembro/2026).
+
+Este é o estado "ramos retos, refinado" — a versão que veio depois de abandonar
+a tentativa de redesenho "sinapses" (ver backup-mapa-ramos-retos/ pra essa
+versão anterior, ainda mais antiga).
+
+Pra restaurar este estado (voltar pro mapa radial com ramos retos):
+  cp backup-mapa-carrossel-anterior/Mapa.tsx.bak   src/pages/Mapa.tsx
+  cp backup-mapa-carrossel-anterior/Mapa.css.bak   src/pages/Mapa.css
+  cp backup-mapa-carrossel-anterior/layout.ts.bak  src/lib/mapa/layout.ts
+  cp backup-mapa-carrossel-anterior/data.ts.bak    src/lib/mapa/data.ts
