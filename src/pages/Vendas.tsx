@@ -63,6 +63,15 @@ function fmtPct(v: number): string {
 function norm(s: string): string {
   return s.trim().toUpperCase();
 }
+// "dd/mm/aaaa" -> "aaaammdd", pra comparar/ordenar datas como texto ("" se vazia)
+function dataKey(dataBR: string): string {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec((dataBR || "").trim());
+  return m ? `${m[3]}${m[2]}${m[1]}` : "";
+}
+// mais recente primeiro; linhas sem data (aluno que não comprou) vão pro fim
+function sortByDataDesc(list: VendaRow[]): VendaRow[] {
+  return [...list].sort((a, b) => dataKey(b.dataVenda).localeCompare(dataKey(a.dataVenda)));
+}
 
 type AlunosStatus = "" | "comprou" | "naocomprou" | "agendado" | "naoagendado";
 
@@ -534,10 +543,12 @@ export default function Vendas() {
   const unmatched = useMemo(() => {
     const base = salesOnly.filter(isUnmatchedRow);
     const f = norm(unmatchedFilter);
-    if (!f) return base;
-    return base.filter(
-      (r) => norm(r.cliente).includes(f) || vendedorLabel(r).toUpperCase().includes(f) || norm(r.cpf).includes(f)
-    );
+    const list = f
+      ? base.filter(
+          (r) => norm(r.cliente).includes(f) || vendedorLabel(r).toUpperCase().includes(f) || norm(r.cpf).includes(f)
+        )
+      : base;
+    return sortByDataDesc(list);
   }, [salesOnly, unmatchedFilter]);
 
   const alunosCounts = useMemo(() => {
@@ -562,13 +573,15 @@ export default function Vendas() {
     else if (alunosStatus === "naoagendado") base = base.filter((r) => agendaStatus(r) === "nao");
 
     const f = norm(alunosFilter);
-    if (!f) return base;
-    return base.filter(
-      (r) =>
-        norm(r.cliente).includes(f) ||
-        vendedorLabel(r).toUpperCase().includes(f) ||
-        norm(institutionLabelOf(r) || "").includes(f)
-    );
+    const list = f
+      ? base.filter(
+          (r) =>
+            norm(r.cliente).includes(f) ||
+            vendedorLabel(r).toUpperCase().includes(f) ||
+            norm(institutionLabelOf(r) || "").includes(f)
+        )
+      : base;
+    return sortByDataDesc(list);
   }, [filtered, alunosStatus, alunosFilter]);
 
   // listas completas pros selects de filtro (não encolhem conforme os
@@ -600,6 +613,20 @@ export default function Vendas() {
     return Array.from(set).sort().reverse();
   }, [rows]);
 
+  // venda mais recente carregada do banco — mostra até quando vão os dados
+  const dataMaisRecente = useMemo(() => {
+    let best = "";
+    let label = "";
+    allSalesOnly.forEach((r) => {
+      const k = dataKey(r.dataVenda);
+      if (k > best) {
+        best = k;
+        label = r.dataVenda;
+      }
+    });
+    return label;
+  }, [allSalesOnly]);
+
   if (error) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-ink-900 text-ink-50">
@@ -626,6 +653,7 @@ export default function Vendas() {
           <h1 className="text-xl font-semibold">Painel de Vendas</h1>
           <p className="text-sm text-ink-400">
             {fmtInt(salesOnly.length)} de {fmtInt(rows.filter((r) => r.descricao !== "NAO COMPROU").length)} vendas
+            {dataMaisRecente && <> · dados até {dataMaisRecente}</>}
           </p>
         </div>
         <div className="relative">
