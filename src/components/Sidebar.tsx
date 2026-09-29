@@ -18,6 +18,8 @@ import {
   Settings,
   Orbit,
   LayoutGrid,
+  Clapperboard,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import Logo from "@/components/Logo";
@@ -34,7 +36,9 @@ const MODULES: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/sdr", label: "SDR (IA)", icon: Bot },
   { to: "/financeiro", label: "Financeiro", icon: Landmark },
   { to: "/producao", label: "Produção", icon: GalleryHorizontalEnd },
+  { to: "/edicao", label: "Edição", icon: Clapperboard },
   { to: "/p4f", label: "P4F / Estúdio", icon: Camera },
+  { to: "/estudio/freelancers", label: "Freelancers", icon: Users },
   { to: "/contas-pagar", label: "Contas a pagar", icon: Receipt },
   { to: "/lucro", label: "Lucro por contrato", icon: TrendingUp },
   { to: "/configuracoes", label: "Configurações", icon: Settings },

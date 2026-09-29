@@ -16,6 +16,11 @@ const Sdr = lazy(() => import("@/pages/Sdr"));
 const Financeiro = lazy(() => import("@/pages/Financeiro"));
 const Producao = lazy(() => import("@/pages/Producao"));
 const Edicao = lazy(() => import("@/pages/Edicao"));
+const EstudioFreelancers = lazy(() => import("@/pages/EstudioFreelancers"));
+const FreelancerLogin = lazy(() => import("@/pages/freelancer/FreelancerLogin"));
+const FreelancerCadastro = lazy(() => import("@/pages/freelancer/FreelancerCadastro"));
+const FreelancerAgenda = lazy(() => import("@/pages/freelancer/FreelancerAgenda"));
+const FreelancerCandidaturas = lazy(() => import("@/pages/freelancer/FreelancerCandidaturas"));
 const P4F = lazy(() => import("@/pages/P4F"));
 const ContasPagar = lazy(() => import("@/pages/ContasPagar"));
 const Lucro = lazy(() => import("@/pages/Lucro"));
@@ -124,6 +129,19 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/estudio/freelancers"
+            element={
+              <ProtectedRoute>
+                <EstudioFreelancers />
+              </ProtectedRoute>
+            }
+          />
+          {/* portal do freelancer — conta separada (sem membership), fora do ProtectedRoute interno */}
+          <Route path="/freelancer/login" element={<FreelancerLogin />} />
+          <Route path="/freelancer/cadastro" element={<FreelancerCadastro />} />
+          <Route path="/freelancer/agenda" element={<FreelancerAgenda />} />
+          <Route path="/freelancer/candidaturas" element={<FreelancerCandidaturas />} />
           <Route
             path="/p4f"
             element={

@@ -10,6 +10,7 @@ import {
   Receipt,
   TrendingUp,
   Clapperboard,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +25,7 @@ const MODULES: { to: string; label: string; icon: LucideIcon; desc: string }[] =
   { to: "/producao", label: "Produção (Itens Vendidos)", icon: GalleryHorizontalEnd, desc: "Status de produção dos itens vendidos." },
   { to: "/edicao", label: "Edição (Convites, Vídeos e Álbuns)", icon: Clapperboard, desc: "Produção do ano corrente e funil de aprovação de álbuns." },
   { to: "/p4f", label: "P4F / Sessão Estúdio", icon: Camera, desc: "Visão filtrada por unidade — Porto Alegre, Caxias, Novo Hamburgo." },
+  { to: "/estudio/freelancers", label: "Freelancers", icon: Users, desc: "Cadastro de fotógrafos freelancer, agenda de vagas e candidaturas." },
   { to: "/contas-pagar", label: "Contas a Pagar", icon: Receipt, desc: "Orçamento e contas a pagar da operação." },
   { to: "/lucro", label: "Lucro por Contrato", icon: TrendingUp, desc: "Margem por contrato — receita menos custos." },
 ];

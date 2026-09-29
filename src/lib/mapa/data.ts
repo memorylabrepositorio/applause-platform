@@ -18,6 +18,12 @@ import { Landmark, Handshake, GalleryHorizontalEnd, Clapperboard, Wallet, Megaph
  * no canto superior esquerdo). O mapa comporta exatamente 8 departamentos —
  * um pra cada setor real da empresa (Diretoria, Comercial, Edição,
  * Atendimento, Financeiro, Marketing, Estúdio, Produção).
+ *
+ * As funções que ainda não existem de verdade (status "dev") foram tiradas
+ * daqui pra não poluir o mapa — ficam guardadas em FUNCOES_FUTURAS logo
+ * abaixo, por departamento, pra não perder a lista. Conforme cada uma for
+ * construída, move o objeto de volta pro `ramos` do departamento certo
+ * (com `to` apontando pra rota nova) e apaga a entrada correspondente daqui.
  */
 
 export type MapaStatus = "ok" | "dev";
@@ -52,13 +58,7 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
     sub: "indicadores · permissões · gestão",
     cor: "#34D399",
     icon: Crown,
-    ramos: [
-      [
-        { nome: "Indicadores gerais", status: "dev" },
-        { nome: "Relatórios consolidados", status: "dev" },
-        { nome: "Controle de permissões por setor", status: "dev" },
-      ],
-    ],
+    ramos: [],
   },
   {
     id: "financeiro",
@@ -71,18 +71,12 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
       [
         { nome: "Contas a receber", status: "ok", to: "/financeiro" },
         { nome: "Cobrança Asaas", status: "ok", to: "/financeiro" },
-        { nome: "Alertas de pagamento no WhatsApp", status: "dev" },
       ],
       [
         { nome: "Contas a pagar", status: "ok", to: "/contas-pagar" },
         { nome: "Lucro por contrato", status: "ok", to: "/lucro" },
-        { nome: "DRE e fluxo de caixa", status: "dev" },
       ],
-      [
-        { nome: "Triagem de notas fiscais", status: "ok", origem: "n8n" },
-        { nome: "Conciliação bancária", status: "dev" },
-        { nome: "Despesa por foto (OCR)", status: "dev" },
-      ],
+      [{ nome: "Triagem de notas fiscais", status: "ok", origem: "n8n" }],
     ],
   },
   {
@@ -96,17 +90,17 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
       [
         { nome: "CRM de atendimento", status: "ok", to: "/atendimento" },
         { nome: "Follow-up e tarefas", status: "ok", to: "/atendimento" },
-        { nome: "Portal do aluno", status: "dev", origem: "applause-app" },
       ],
       [
         { nome: "SDR · lembretes no WhatsApp", status: "ok", to: "/sdr" },
-        { nome: "SDR · IA conversando com o aluno", status: "dev", to: "/sdr" },
         { nome: "Configuração do agente", status: "ok", to: "/configuracoes#agente" },
+        { nome: "SDR · IA conversando com o aluno", status: "dev", to: "/sdr" },
       ],
       [
         { nome: "Notificações in-app e push", status: "ok", origem: "applause-app" },
         { nome: "Envio em massa (fila)", status: "ok", origem: "applause-app" },
         { nome: "Agenda Google Calendar", status: "ok", origem: "applause-app" },
+        { nome: "Portal do aluno", status: "dev", origem: "applause-app" },
       ],
     ],
   },
@@ -125,12 +119,8 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
       [
         { nome: "Reconhecimento facial", status: "ok", origem: "RECFACIAL-IA" },
         { nome: "Separação de fotos por aluno", status: "ok", origem: "RECFACIAL-IA" },
-        { nome: "Painel remoto do reconhecimento", status: "dev", origem: "Render" },
       ],
-      [
-        { nome: "Auto Export Lightroom", status: "ok", origem: "plugin Lightroom" },
-        { nome: "Seleção de álbum pelo aluno", status: "dev", origem: "applause-app" },
-      ],
+      [{ nome: "Auto Export Lightroom", status: "ok", origem: "plugin Lightroom" }],
     ],
   },
   {
@@ -146,8 +136,8 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
         { nome: "Indicadores por unidade", status: "ok", to: "/p4f" },
       ],
       [
-        { nome: "Agenda de sessões", status: "dev" },
-        { nome: "Controle de equipamento", status: "dev" },
+        { nome: "Cadastro de freelancers", status: "ok", to: "/estudio/freelancers" },
+        { nome: "Agenda de vagas e candidaturas", status: "ok", to: "/estudio/freelancers" },
       ],
     ],
   },
@@ -165,14 +155,10 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
         { nome: "Vídeo telão (After Effects)", status: "ok", origem: "worker de renderização" },
         { nome: "Vídeo sem foto", status: "ok", origem: "worker de renderização" },
       ],
+      [{ nome: "Corte de músicas", status: "ok", origem: "worker de renderização" }],
       [
-        { nome: "Corte de músicas", status: "ok", origem: "worker de renderização" },
-        { nome: "Slideshow de fotos com fade", status: "dev", origem: "worker de renderização" },
-        { nome: "Monitor de erros com IA", status: "dev", origem: "error-monitor" },
-      ],
-      [
-        { nome: "Edição de fotolivro", status: "ok", origem: "planilha de controle", to: "/edicao" },
-        { nome: "Funil de álbuns (aprovação · gráfica)", status: "ok", origem: "Apps Script", to: "/edicao" },
+        { nome: "Edição de fotolivro", status: "ok", to: "/edicao", origem: "planilha de controle" },
+        { nome: "Funil de álbuns (aprovação · gráfica)", status: "ok", to: "/edicao", origem: "Apps Script" },
       ],
     ],
   },
@@ -192,7 +178,6 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
         { nome: "Exportação diária do Pronet", status: "ok", origem: "PronetAutomacao" },
         { nome: "Relatório mensal automático", status: "ok", origem: "Apps Script" },
         { nome: "Painel de vendedores e comissão", status: "ok", origem: "Apps Script" },
-        { nome: "Import do Pronet na plataforma", status: "dev" },
       ],
     ],
   },
@@ -202,12 +187,43 @@ export const DEPARTAMENTOS: MapaDepartamento[] = [
     sub: "anúncios · Reels · Instagram",
     cor: "#7DD3FC",
     icon: Megaphone,
-    ramos: [
-      [
-        { nome: "Ad Manager Hub", status: "ok", origem: "applause-ads-flow" },
-        { nome: "Reels de recreios (corte por BPM)", status: "dev" },
-        { nome: "Aprendizado com o editor", status: "dev" },
-      ],
-    ],
+    ramos: [[{ nome: "Ad Manager Hub", status: "ok", origem: "applause-ads-flow" }]],
   },
 ];
+
+/**
+ * Backlog de funções ainda não construídas (removidas do `ramos` acima pra
+ * não poluir o mapa). Não é usado em nenhuma tela — é só pra não perder a
+ * lista. Ao construir uma, mova o objeto de volta pro departamento certo em
+ * DEPARTAMENTOS (com `to` apontando pra rota nova) e apague a entrada daqui.
+ */
+export const FUNCOES_FUTURAS: Record<string, MapaFuncao[]> = {
+  diretoria: [
+    { nome: "Indicadores gerais", status: "dev" },
+    { nome: "Relatórios consolidados", status: "dev" },
+    { nome: "Controle de permissões por setor", status: "dev" },
+  ],
+  financeiro: [
+    { nome: "Alertas de pagamento no WhatsApp", status: "dev" },
+    { nome: "DRE e fluxo de caixa", status: "dev" },
+    { nome: "Conciliação bancária", status: "dev" },
+    { nome: "Despesa por foto (OCR)", status: "dev" },
+  ],
+  producao: [
+    { nome: "Painel remoto do reconhecimento", status: "dev", origem: "Render" },
+    { nome: "Seleção de álbum pelo aluno", status: "dev", origem: "applause-app" },
+  ],
+  estudio: [
+    { nome: "Agenda de sessões", status: "dev" },
+    { nome: "Controle de equipamento", status: "dev" },
+  ],
+  edicao: [
+    { nome: "Slideshow de fotos com fade", status: "dev", origem: "worker de renderização" },
+    { nome: "Monitor de erros com IA", status: "dev", origem: "error-monitor" },
+  ],
+  comercial: [{ nome: "Import do Pronet na plataforma", status: "dev" }],
+  marketing: [
+    { nome: "Reels de recreios (corte por BPM)", status: "dev" },
+    { nome: "Aprendizado com o editor", status: "dev" },
+  ],
+};
