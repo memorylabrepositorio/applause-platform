@@ -30,8 +30,9 @@ export function FreelancerProtectedRoute({ children }: { children: (ctx: Ctx) =>
 
   if (authLoading || perfilLoading) {
     return (
-      <div className="flex h-screen items-center justify-center text-ink-300">
-        Carregando…
+      <div className="flex h-screen flex-col items-center justify-center gap-3 text-ink-300">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+        <span className="text-sm">Carregando…</span>
       </div>
     );
   }
