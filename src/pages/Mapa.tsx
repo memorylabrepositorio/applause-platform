@@ -42,6 +42,9 @@ export default function Mapa() {
   const [arrastando, setArrastando] = useState(false);
 
   const foco = depts[focoIdx];
+  const funcoesFoco = useMemo(() => foco.ramos.flat(), [foco]);
+  // setor com muitas funções vira grade de 2 colunas em vez de rolar
+  const muitasFuncoes = funcoesFoco.length > 8;
 
   // arrastar a lista do submenu com o mouse (além da roda/trackpad, que já
   // funciona nativamente por causa do overflow-y: auto)
@@ -326,7 +329,7 @@ export default function Mapa() {
             ) : (
               <motion.div
                 key="grade"
-                className={`mapa-grade-caixa${arrastando ? " arrastando" : ""}`}
+                className={`mapa-grade-caixa${arrastando ? " arrastando" : ""}${muitasFuncoes ? " colunas" : ""}`}
                 ref={gradeRef}
                 onMouseDown={onGradeMouseDown}
                 initial={{ opacity: 0, scale: 0.96 }}
@@ -334,7 +337,7 @@ export default function Mapa() {
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={TROCA}
               >
-                {foco.ramos.flat().map((f) => (
+                {funcoesFoco.map((f) => (
                   <button
                     type="button"
                     key={f.nome}

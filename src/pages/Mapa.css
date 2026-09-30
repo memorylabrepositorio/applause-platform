@@ -173,15 +173,25 @@
 .mapa-nav-btn.ativo:hover { background: color-mix(in srgb, var(--c) 22%, transparent); }
 .mapa-nav-btn.ativo .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
 
-/* ---------- estado expandido: lista empilhada de funções do setor ---------- */
+/* ---------- estado expandido: lista empilhada de funções do setor ----------
+   uma coluna só por padrão; quando o setor tem muitas funções (.colunas),
+   vira uma grade de 2 colunas em vez de rolar — o scroll fica só como
+   último recurso (overflow-y), não como comportamento esperado */
 .mapa-grade-caixa {
-  width: 100%; max-width: 640px; height: 100%; margin: 0 auto; padding: 84px 8px 28px;
-  display: flex; flex-direction: column; gap: 16px;
+  width: 100%; max-width: 640px; height: 100%; margin: 0 auto; padding: 76px 8px 20px;
+  display: flex; flex-direction: column; gap: 8px;
   overflow-y: auto; cursor: grab;
+}
+.mapa-grade-caixa.colunas {
+  max-width: 920px;
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: min-content;
+  align-content: start;
+  column-gap: 14px; row-gap: 8px;
 }
 .mapa-grade-caixa.arrastando { cursor: grabbing; user-select: none; }
 .mapa-func {
-  width: 100%; padding: 20px 24px; border-radius: 16px; text-align: left;
+  width: 100%; padding: 11px 16px; border-radius: 12px; text-align: left;
   background: var(--m-vidro); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--m-linha);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
@@ -192,10 +202,10 @@
 .mapa-func:hover { box-shadow: 0 0 22px color-mix(in srgb, var(--c) 20%, transparent); }
 .mapa-func.destaque { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), 0 0 28px color-mix(in srgb, var(--c) 45%, transparent); animation: mapa-pulso 1.1s ease-in-out 2; }
 @keyframes mapa-pulso { 50% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 75%, transparent), 0 0 42px color-mix(in srgb, var(--c) 65%, transparent); } }
-.mapa-func .n { display: flex; align-items: center; gap: 10px; font-size: 15px; color: rgb(var(--m-texto)); line-height: 1.3; }
-.mapa-func .n i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); flex-shrink: 0; }
+.mapa-func .n { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: rgb(var(--m-texto)); line-height: 1.25; }
+.mapa-func .n i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); flex-shrink: 0; }
 .mapa-func .n i.dev { background: transparent; border: 1.4px solid rgb(var(--m-texto-3)); box-shadow: none; }
-.mapa-func .o { display: block; margin-top: 8px; margin-left: 18px; font-size: 11.5px; color: rgb(var(--m-texto-3)); }
+.mapa-func .o { display: block; margin-top: 5px; margin-left: 16px; font-size: 11px; color: rgb(var(--m-texto-3)); }
 
 .mapa-trilha {
   height: 34px; padding: 0 14px; border-radius: 9px; min-width: 0; flex-shrink: 1;
@@ -214,8 +224,9 @@
   .mapa-voltar .txt { display: none; }
   .mapa-voltar { width: 34px; padding: 0; justify-content: center; }
   .mapa-swiper .swiper-slide { width: 138px; height: 190px; }
-  .mapa-grade-caixa { padding-top: 68px; gap: 12px; }
-  .mapa-func { padding: 16px 18px; }
+  .mapa-grade-caixa { padding-top: 64px; gap: 7px; }
+  .mapa-grade-caixa.colunas { grid-template-columns: 1fr; }
+  .mapa-func { padding: 12px 14px; }
 }
 
 /* legenda */
