@@ -25,7 +25,7 @@ interface Portal {
 }
 
 // duração do zoom de entrada num módulo
-const PORTAL_MS = 230;
+const PORTAL_MS = 320;
 
 export default function Mapa() {
   const navigate = useNavigate();
@@ -237,7 +237,13 @@ export default function Mapa() {
         ref={boxRef}
         style={{ transformOrigin: portal ? `${portal.ox}% ${portal.oy}%` : "50% 50%" }}
         animate={{ opacity: portal ? 0 : 1, scale: portal ? 9 : 1 }}
-        transition={{ duration: PORTAL_MS / 1000, ease: [0.64, 0, 0.78, 0] }}
+        transition={{
+          // o zoom desacelera suavemente (easeOut "expo" — fluido, sem trancos)
+          scale: { duration: PORTAL_MS / 1000, ease: [0.16, 1, 0.3, 1] },
+          // já o fade é rápido e forte — some bem antes do zoom terminar de
+          // crescer, então não sobra nada visível "grudado" na tela
+          opacity: { duration: (PORTAL_MS * 0.55) / 1000, ease: "easeIn" },
+        }}
       >
         <div className="mapa-topo">
           <button type="button" className="mapa-vidro mapa-btn" onClick={telaCheiaToggle} aria-label="Alternar tela cheia">
