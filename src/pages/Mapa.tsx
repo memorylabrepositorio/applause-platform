@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Search } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { EffectCoverflow } from "swiper/modules";
@@ -24,8 +24,19 @@ interface Portal {
   oy: number;
 }
 
-// duração do zoom de entrada num módulo
+// duração do zoom de saída (ao entrar num módulo/submenu)
 const PORTAL_MS = 320;
+// duração da troca de conteúdo (fade + leve escala) quando NÃO há zoom —
+// entrada do palco/grade em condições normais (sem "portal" ativo)
+const TROCA_MS = 0.32;
+
+// transição do zoom de saída: escala desacelera suave, opacidade some já
+// nos primeiros 30% do trajeto (keyframes com "times" — determinístico,
+// não depende de durações desencontradas entre as duas propriedades)
+const transicaoPortal: import("framer-motion").Transition = {
+  scale: { duration: PORTAL_MS / 1000, ease: [0.16, 1, 0.3, 1] },
+  opacity: { duration: PORTAL_MS / 1000, times: [0, 0.3, 1], ease: "easeOut" },
+};
 
 export default function Mapa() {
   const navigate = useNavigate();
@@ -232,27 +243,7 @@ export default function Mapa() {
 
   return (
     <Layout>
-      <motion.div
-        className="mapa"
-        ref={boxRef}
-        style={{ transformOrigin: portal ? `${portal.ox}% ${portal.oy}%` : "50% 50%" }}
-        animate={{
-          // opacidade em keyframes explícitos na MESMA linha do tempo do
-          // scale (0 a 1): já sai sumindo e aos 30% do trajeto já é zero —
-          // "times" garante isso de forma determinística, sem depender de
-          // durações/easings desencontrados entre as duas propriedades
-          opacity: portal ? [1, 0, 0] : 1,
-          scale: portal ? 9 : 1,
-        }}
-        transition={{
-          // o zoom desacelera suavemente (easeOut "expo" — fluido, sem trancos)
-          scale: { duration: PORTAL_MS / 1000, ease: [0.16, 1, 0.3, 1] },
-          // mesma duração do scale, mas com times fixos: em 30% do tempo
-          // total o elemento já está 100% invisível — bem antes do zoom
-          // "chegar" (terminar de crescer)
-          opacity: { duration: PORTAL_MS / 1000, times: [0, 0.3, 1], ease: "easeOut" },
-        }}
-      >
+      <div className="mapa" ref={boxRef}>
         <div className="mapa-topo">
           <button type="button" className="mapa-vidro mapa-btn" onClick={telaCheiaToggle} aria-label="Alternar tela cheia">
             {telaCheia ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
@@ -307,95 +298,119 @@ export default function Mapa() {
         </div>
 
         <div className="mapa-viewport">
-          {!expandido ? (
-            <div className="mapa-palco">
-              <div className="mapa-carrossel-caixa">
-                <div className="mapa-ambiente" style={{ "--c": foco.cor } as CSSProperties} />
-                <Swiper
-                  modules={[EffectCoverflow]}
-                  effect="coverflow"
-                  grabCursor
-                  centeredSlides
-                  loop
-                  speed={650}
-                  slidesPerView="auto"
-                  spaceBetween={30}
-                  coverflowEffect={{ rotate: 18, stretch: 20, depth: 110, modifier: 1, slideShadows: false }}
-                  onSwiper={(sw) => {
-                    swiperRef.current = sw;
-                    sw.slideToLoop(focoInicial, 0, false);
-                  }}
-                  onSlideChange={(sw) => setFocoIdx(sw.realIndex)}
-                  className="mapa-swiper"
-                >
-                  {depts.map((d, i) => {
-                    const Icon = d.icon;
-                    return (
-                      <SwiperSlide key={d.id} className="mapa-slide">
-                        <button
-                          type="button"
-                          className={`mapa-card${i === focoIdx ? " ativo" : ""}`}
-                          style={{ "--c": d.cor } as CSSProperties}
-                          onClick={(e) => cliqueCard(e, i)}
-                          aria-label={i === focoIdx ? `Abrir ${d.nome}` : `Focar ${d.nome}`}
-                        >
-                          <span className="mapa-card-icone">
-                            <Icon strokeWidth={1.5} />
-                          </span>
-                          <span className="mapa-card-nome">{d.nome}</span>
-                          <span className="mapa-card-sub">{d.sub}</span>
-                        </button>
-                      </SwiperSlide>
-                    );
-                  })}
-                </Swiper>
-              </div>
+          <AnimatePresence mode="wait" initial={false}>
+            {!expandido ? (
+              <motion.div
+                key="palco"
+                className="mapa-palco"
+                style={{ transformOrigin: portal ? `${portal.ox}% ${portal.oy}%` : "50% 50%" }}
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={
+                  portal
+                    ? { opacity: [1, 0, 0], scale: 9 }
+                    : { opacity: 1, scale: 1 }
+                }
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={portal ? transicaoPortal : { duration: TROCA_MS, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <div className="mapa-carrossel-caixa">
+                  <div className="mapa-ambiente" style={{ "--c": foco.cor } as CSSProperties} />
+                  <Swiper
+                    modules={[EffectCoverflow]}
+                    effect="coverflow"
+                    grabCursor
+                    centeredSlides
+                    loop
+                    speed={650}
+                    slidesPerView="auto"
+                    spaceBetween={30}
+                    coverflowEffect={{ rotate: 18, stretch: 20, depth: 110, modifier: 1, slideShadows: false }}
+                    onSwiper={(sw) => {
+                      swiperRef.current = sw;
+                      sw.slideToLoop(focoInicial, 0, false);
+                    }}
+                    onSlideChange={(sw) => setFocoIdx(sw.realIndex)}
+                    className="mapa-swiper"
+                  >
+                    {depts.map((d, i) => {
+                      const Icon = d.icon;
+                      return (
+                        <SwiperSlide key={d.id} className="mapa-slide">
+                          <button
+                            type="button"
+                            className={`mapa-card${i === focoIdx ? " ativo" : ""}`}
+                            style={{ "--c": d.cor } as CSSProperties}
+                            onClick={(e) => cliqueCard(e, i)}
+                            aria-label={i === focoIdx ? `Abrir ${d.nome}` : `Focar ${d.nome}`}
+                          >
+                            <span className="mapa-card-icone">
+                              <Icon strokeWidth={1.5} />
+                            </span>
+                            <span className="mapa-card-nome">{d.nome}</span>
+                            <span className="mapa-card-sub">{d.sub}</span>
+                          </button>
+                        </SwiperSlide>
+                      );
+                    })}
+                  </Swiper>
+                </div>
 
-              <button type="button" className="mapa-setor-nome" onClick={abrirExpandido}>
-                {foco.nome}
-              </button>
+                <button type="button" className="mapa-setor-nome" onClick={abrirExpandido}>
+                  {foco.nome}
+                </button>
 
-              <div className="mapa-navs mapa-vidro">
-                <button type="button" className="mapa-nav-btn" onClick={() => irPara(-1)} aria-label="Departamento anterior">
-                  <ChevronLeft size={17} strokeWidth={1.6} />
-                </button>
-                <button
-                  type="button"
-                  className="mapa-nav-btn ativo"
-                  style={{ "--c": foco.cor } as CSSProperties}
-                  onClick={abrirExpandido}
-                  aria-label={`Abrir ${foco.nome}`}
-                >
-                  <span className="ponto" />
-                </button>
-                <button type="button" className="mapa-nav-btn" onClick={() => irPara(1)} aria-label="Próximo departamento">
-                  <ChevronRight size={17} strokeWidth={1.6} />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div
-              className={`mapa-grade-caixa${arrastando ? " arrastando" : ""}`}
-              ref={gradeRef}
-              onMouseDown={onGradeMouseDown}
-            >
-              {foco.ramos.flat().map((f) => (
-                <button
-                  type="button"
-                  key={f.nome}
-                  className={`mapa-func${destaque === f.nome ? " destaque" : ""}${f.to ? " link" : ""}`}
-                  style={{ "--c": foco.cor } as CSSProperties}
-                  onClick={(e) => abrir(e, f)}
-                >
-                  <span className="n">
-                    <i className={f.status === "dev" ? "dev" : ""} />
-                    {f.nome}
-                  </span>
-                  {f.origem && <span className="o">{f.origem}</span>}
-                </button>
-              ))}
-            </div>
-          )}
+                <div className="mapa-navs mapa-vidro">
+                  <button type="button" className="mapa-nav-btn" onClick={() => irPara(-1)} aria-label="Departamento anterior">
+                    <ChevronLeft size={17} strokeWidth={1.6} />
+                  </button>
+                  <button
+                    type="button"
+                    className="mapa-nav-btn ativo"
+                    style={{ "--c": foco.cor } as CSSProperties}
+                    onClick={abrirExpandido}
+                    aria-label={`Abrir ${foco.nome}`}
+                  >
+                    <span className="ponto" />
+                  </button>
+                  <button type="button" className="mapa-nav-btn" onClick={() => irPara(1)} aria-label="Próximo departamento">
+                    <ChevronRight size={17} strokeWidth={1.6} />
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="grade"
+                className={`mapa-grade-caixa${arrastando ? " arrastando" : ""}`}
+                ref={gradeRef}
+                onMouseDown={onGradeMouseDown}
+                style={{ transformOrigin: portal ? `${portal.ox}% ${portal.oy}%` : "50% 50%" }}
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={
+                  portal
+                    ? { opacity: [1, 0, 0], scale: 9 }
+                    : { opacity: 1, scale: 1 }
+                }
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={portal ? transicaoPortal : { duration: TROCA_MS, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {foco.ramos.flat().map((f) => (
+                  <button
+                    type="button"
+                    key={f.nome}
+                    className={`mapa-func${destaque === f.nome ? " destaque" : ""}${f.to ? " link" : ""}`}
+                    style={{ "--c": foco.cor } as CSSProperties}
+                    onClick={(e) => abrir(e, f)}
+                  >
+                    <span className="n">
+                      <i className={f.status === "dev" ? "dev" : ""} />
+                      {f.nome}
+                    </span>
+                    {f.origem && <span className="o">{f.origem}</span>}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {!expandido && (
@@ -404,7 +419,7 @@ export default function Mapa() {
             <span><i className="vazado" />Em desenvolvimento</span>
           </div>
         )}
-      </motion.div>
+      </div>
     </Layout>
   );
 }
