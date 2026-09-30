@@ -236,13 +236,21 @@ export default function Mapa() {
         className="mapa"
         ref={boxRef}
         style={{ transformOrigin: portal ? `${portal.ox}% ${portal.oy}%` : "50% 50%" }}
-        animate={{ opacity: portal ? 0 : 1, scale: portal ? 9 : 1 }}
+        animate={{
+          // opacidade em keyframes explícitos na MESMA linha do tempo do
+          // scale (0 a 1): já sai sumindo e aos 30% do trajeto já é zero —
+          // "times" garante isso de forma determinística, sem depender de
+          // durações/easings desencontrados entre as duas propriedades
+          opacity: portal ? [1, 0, 0] : 1,
+          scale: portal ? 9 : 1,
+        }}
         transition={{
           // o zoom desacelera suavemente (easeOut "expo" — fluido, sem trancos)
           scale: { duration: PORTAL_MS / 1000, ease: [0.16, 1, 0.3, 1] },
-          // já o fade é rápido e forte — some bem antes do zoom terminar de
-          // crescer, então não sobra nada visível "grudado" na tela
-          opacity: { duration: (PORTAL_MS * 0.55) / 1000, ease: "easeIn" },
+          // mesma duração do scale, mas com times fixos: em 30% do tempo
+          // total o elemento já está 100% invisível — bem antes do zoom
+          // "chegar" (terminar de crescer)
+          opacity: { duration: PORTAL_MS / 1000, times: [0, 0.3, 1], ease: "easeOut" },
         }}
       >
         <div className="mapa-topo">
