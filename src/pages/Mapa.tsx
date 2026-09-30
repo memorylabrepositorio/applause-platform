@@ -18,25 +18,10 @@ interface Achado {
   dept: MapaDepartamento;
 }
 
-// origem do zoom de saída, em % da caixa do Mapa — usado como transform-origin
-interface Portal {
-  ox: number;
-  oy: number;
-}
-
-// duração do zoom de saída (ao entrar num módulo/submenu)
-const PORTAL_MS = 320;
-// duração da troca de conteúdo (fade + leve escala) quando NÃO há zoom —
-// entrada do palco/grade em condições normais (sem "portal" ativo)
-const TROCA_MS = 0.32;
-
-// transição do zoom de saída: escala desacelera suave, opacidade some já
-// nos primeiros 30% do trajeto (keyframes com "times" — determinístico,
-// não depende de durações desencontradas entre as duas propriedades)
-const transicaoPortal: import("framer-motion").Transition = {
-  scale: { duration: PORTAL_MS / 1000, ease: [0.16, 1, 0.3, 1] },
-  opacity: { duration: PORTAL_MS / 1000, times: [0, 0.3, 1], ease: "easeOut" },
-};
+// troca entre carrossel e submenu: crossfade simples (fade + leve escala),
+// sem zoom nem origem de clique — mesmo padrão usado em Radix/shadcn pra
+// substituir conteúdo na tela
+const TROCA: import("framer-motion").Transition = { duration: 0.22, ease: [0.16, 1, 0.3, 1] };
 
 export default function Mapa() {
   const navigate = useNavigate();
@@ -49,27 +34,14 @@ export default function Mapa() {
   const [busca, setBusca] = useState("");
   const [destaque, setDestaque] = useState<string | null>(null);
   const [telaCheia, setTelaCheia] = useState(false);
-  const [portal, setPortal] = useState<Portal | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<SwiperClass | null>(null);
   const gradeRef = useRef<HTMLDivElement>(null);
   const arrastoRef = useRef<{ y: number; scroll: number } | null>(null);
   const arrastouRef = useRef(false);
-  const destinoRef = useRef<string | null>(null);
   const [arrastando, setArrastando] = useState(false);
 
   const foco = depts[focoIdx];
-
-  // trava o scroll da página enquanto o zoom de saída cresce, pra ele não
-  // estourar o layout e abrir barra de rolagem por uma fração de segundo
-  useEffect(() => {
-    if (!portal) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [portal]);
 
   // arrastar a lista do submenu com o mouse (além da roda/trackpad, que já
   // funciona nativamente por causa do overflow-y: auto)
@@ -110,6 +82,21 @@ export default function Mapa() {
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
 
+  // a sidebar expande/recolhe com uma transição de largura (hover/pin) — o
+  // Swiper não escuta esse tipo de redimensionamento do próprio contêiner
+  // sozinho de forma confiável, então ele reobserva o tamanho aqui e força
+  // o recálculo (update) sempre que a caixa do Mapa mudar de largura, pra
+  // o carrossel nunca ficar centralizado com base numa medida antiga
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      swiperRef.current?.update();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const irPara = useCallback((passo: number) => {
     const sw = swiperRef.current;
     if (!sw) return;
@@ -117,8 +104,8 @@ export default function Mapa() {
     else sw.slideNext();
   }, []);
 
-  // ao abrir um módulo de verdade, o próprio Mapa dá um zoom gigante a partir
-  // do ponto clicado e desaparece (fade) — só navega depois que ele sumiu
+  // abre um módulo de verdade — navega direto, sem efeito de saída; a
+  // própria rota de destino já mostra o spinner de carregamento
   const abrir = useCallback(
     (e: React.MouseEvent<HTMLElement>, funcao: MapaFuncao) => {
       if (arrastouRef.current) {
@@ -126,38 +113,14 @@ export default function Mapa() {
         return;
       }
       if (!funcao.to) return;
-      const caixa = boxRef.current?.getBoundingClientRect();
-      const rect = e.currentTarget.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      destinoRef.current = funcao.to;
-      setPortal({
-        ox: caixa ? ((cx - caixa.left) / caixa.width) * 100 : 50,
-        oy: caixa ? ((cy - caixa.top) / caixa.height) * 100 : 50,
-      });
-      setTimeout(() => {
-        if (destinoRef.current) navigate(destinoRef.current);
-      }, PORTAL_MS);
+      navigate(funcao.to);
     },
     [navigate]
   );
 
-  // mesmo zoom de saída, mas pra abrir o submenu do setor (sem navegar pra
-  // fora da página) — ao final, troca pra grade e volta a encolher, como se
-  // estivesse "pousando" dentro do módulo
-  const abrirExpandido = useCallback((e: React.MouseEvent<HTMLElement>) => {
-    const caixa = boxRef.current?.getBoundingClientRect();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    setPortal({
-      ox: caixa ? ((cx - caixa.left) / caixa.width) * 100 : 50,
-      oy: caixa ? ((cy - caixa.top) / caixa.height) * 100 : 50,
-    });
-    setTimeout(() => {
-      setExpandido(true);
-      setPortal(null);
-    }, PORTAL_MS);
+  // abre o submenu do setor — troca de conteúdo com o crossfade padrão
+  const abrirExpandido = useCallback(() => {
+    setExpandido(true);
   }, []);
 
   const irParaDept = useCallback((i: number, abrirDireto = false) => {
@@ -170,20 +133,8 @@ export default function Mapa() {
   const abrirDestaque = useCallback(
     (e: React.MouseEvent<HTMLElement>, achado: Achado) => {
       if (achado.funcao.to) {
-        // já é uma rota de verdade — mesmo zoom de saída usado na grade
-        const caixa = boxRef.current?.getBoundingClientRect();
-        const rect = e.currentTarget.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        destinoRef.current = achado.funcao.to;
-        setPortal({
-          ox: caixa ? ((cx - caixa.left) / caixa.width) * 100 : 50,
-          oy: caixa ? ((cy - caixa.top) / caixa.height) * 100 : 50,
-        });
         setBusca("");
-        setTimeout(() => {
-          if (destinoRef.current) navigate(destinoRef.current);
-        }, PORTAL_MS);
+        navigate(achado.funcao.to);
         return;
       }
       const i = depts.findIndex((x) => x.id === achado.dept.id);
@@ -236,8 +187,8 @@ export default function Mapa() {
     else el.requestFullscreen?.().catch(() => undefined);
   }
 
-  function cliqueCard(e: React.MouseEvent<HTMLButtonElement>, i: number) {
-    if (i === focoIdx) abrirExpandido(e);
+  function cliqueCard(i: number) {
+    if (i === focoIdx) abrirExpandido();
     else irParaDept(i);
   }
 
@@ -303,15 +254,10 @@ export default function Mapa() {
               <motion.div
                 key="palco"
                 className="mapa-palco"
-                style={{ transformOrigin: portal ? `${portal.ox}% ${portal.oy}%` : "50% 50%" }}
                 initial={{ opacity: 0, scale: 0.97 }}
-                animate={
-                  portal
-                    ? { opacity: [1, 0, 0], scale: 9 }
-                    : { opacity: 1, scale: 1 }
-                }
+                animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.97 }}
-                transition={portal ? transicaoPortal : { duration: TROCA_MS, ease: [0.16, 1, 0.3, 1] }}
+                transition={TROCA}
               >
                 <div className="mapa-carrossel-caixa">
                   <div className="mapa-ambiente" style={{ "--c": foco.cor } as CSSProperties} />
@@ -340,7 +286,7 @@ export default function Mapa() {
                             type="button"
                             className={`mapa-card${i === focoIdx ? " ativo" : ""}`}
                             style={{ "--c": d.cor } as CSSProperties}
-                            onClick={(e) => cliqueCard(e, i)}
+                            onClick={() => cliqueCard(i)}
                             aria-label={i === focoIdx ? `Abrir ${d.nome}` : `Focar ${d.nome}`}
                           >
                             <span className="mapa-card-icone">
@@ -383,15 +329,10 @@ export default function Mapa() {
                 className={`mapa-grade-caixa${arrastando ? " arrastando" : ""}`}
                 ref={gradeRef}
                 onMouseDown={onGradeMouseDown}
-                style={{ transformOrigin: portal ? `${portal.ox}% ${portal.oy}%` : "50% 50%" }}
                 initial={{ opacity: 0, scale: 0.96 }}
-                animate={
-                  portal
-                    ? { opacity: [1, 0, 0], scale: 9 }
-                    : { opacity: 1, scale: 1 }
-                }
+                animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
-                transition={portal ? transicaoPortal : { duration: TROCA_MS, ease: [0.16, 1, 0.3, 1] }}
+                transition={TROCA}
               >
                 {foco.ramos.flat().map((f) => (
                   <button
