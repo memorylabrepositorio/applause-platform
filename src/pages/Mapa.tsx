@@ -25,7 +25,7 @@ interface Portal {
 }
 
 // duração do zoom de entrada num módulo
-const PORTAL_MS = 420;
+const PORTAL_MS = 230;
 
 export default function Mapa() {
   const navigate = useNavigate();
