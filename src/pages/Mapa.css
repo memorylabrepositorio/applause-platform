@@ -12,19 +12,15 @@
   --m-texto: 236 229 216;
   --m-texto-2: 185 178 166;
   --m-texto-3: 140 135 127;
-  --m-estrela: 255 255 255;
   --m-linha: rgb(255 255 255 / 0.09);
   --m-vidro: rgb(22 22 28 / 0.62);
-  --m-fundo: radial-gradient(ellipse 60% 55% at 50% 30%, #161821 0%, #0b0c11 55%, #060709 100%);
   --m-display: "Marcellus", Georgia, serif;
 
   position: relative;
   height: calc(100dvh - 57px - 1.5rem);
   min-height: 480px;
   overflow: hidden;
-  border-radius: 18px;
-  border: 1px solid var(--m-linha);
-  background: var(--m-fundo);
+  background: transparent;
   color: rgb(var(--m-texto));
   isolation: isolate;
 }
@@ -34,30 +30,17 @@
 @media (min-width: 1024px) {
   .mapa { height: calc(100dvh - 3rem); }
 }
-.mapa:fullscreen { border-radius: 0; height: 100vh; }
+.mapa:fullscreen { height: 100vh; background: rgb(var(--ink-950)); }
 
 :root[data-theme="light"] .mapa {
   --m-texto: var(--ink-100);
   --m-texto-2: var(--ink-300);
   --m-texto-3: var(--ink-400);
-  --m-estrela: var(--ink-400);
   --m-linha: rgb(0 0 0 / 0.08);
   --m-vidro: rgb(255 255 255 / 0.72);
-  --m-fundo: radial-gradient(ellipse 60% 55% at 50% 30%, #ffffff 0%, rgb(var(--ink-900)) 60%, rgb(var(--ink-800)) 100%);
 }
 
 .mapa button { cursor: pointer; }
-
-/* estrelas */
-.mapa-estrelas { position: absolute; inset: 0; pointer-events: none; }
-.mapa-estrela {
-  position: absolute;
-  border-radius: 50%;
-  background: rgb(var(--m-estrela));
-  opacity: 0.5;
-  animation: mapa-brilho ease-in-out infinite;
-}
-@keyframes mapa-brilho { 50% { opacity: 0.12; } }
 
 /* barra do topo */
 .mapa-topo {
@@ -90,13 +73,6 @@
 }
 .mapa-busca input::placeholder { color: rgb(var(--m-texto-3)); }
 .mapa-busca-n { font-size: 11px; font-variant-numeric: tabular-nums; color: rgb(var(--brand-400)); }
-.mapa-aba {
-  position: absolute; left: 50%; transform: translateX(-50%);
-  padding: 7px 14px; border-radius: 8px;
-  background: rgb(var(--m-texto)); color: rgb(var(--ink-900));
-  font: 700 10px/1 system-ui, sans-serif; letter-spacing: 0.18em;
-}
-@media (max-width: 767px) { .mapa-aba { display: none; } }
 
 .mapa-busca-lista {
   position: absolute; left: 0; top: calc(100% + 6px); width: 100%; z-index: 40;
@@ -120,6 +96,14 @@
    --------------------------------------------------------------------- */
 .mapa-viewport { position: absolute; inset: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 0 32px; }
 
+/* palco — carrossel + nome do setor + setas, tudo num único bloco flex
+   centralizado de verdade (vertical e horizontal), em vez de cada peça
+   flutuar com posições absolutas independentes */
+.mapa-palco {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 22px; width: 100%; height: 100%;
+}
+
 .mapa-carrossel-caixa { position: relative; width: 100%; max-width: 760px; }
 .mapa-ambiente {
   position: absolute; inset: -30% -10%; z-index: -1; pointer-events: none;
@@ -129,6 +113,9 @@
 
 .mapa-swiper { width: 100%; padding: 20px 0 16px; overflow: visible; }
 .mapa-swiper .swiper-slide { width: 168px; height: 220px; display: flex; align-items: center; justify-content: center; }
+/* transição mais fluida entre os slides (padrão do Swiper é meio seca) —
+   curva "ease-out expo", a mesma família usada em radix/shadcn */
+.mapa-swiper .swiper-wrapper { transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important; }
 
 .mapa-card {
   width: 90%; height: 90%; padding: 0; border: 0; border-radius: 18px;
@@ -142,7 +129,7 @@
 .mapa-card:hover {
   border-color: color-mix(in srgb, var(--c) 55%, transparent);
   box-shadow: 0 0 24px color-mix(in srgb, var(--c) 22%, transparent);
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 .mapa-card-icone {
   width: 54px; height: 54px; border-radius: 50%; flex-shrink: 0;
@@ -157,21 +144,20 @@
 .mapa-card.ativo {
   border-color: color-mix(in srgb, var(--c) 70%, transparent);
   box-shadow: 0 0 32px color-mix(in srgb, var(--c) 30%, transparent);
-  transform: scale(1.08);
+  transform: scale(1.16);
 }
-.mapa-card.ativo:hover { transform: scale(1.1); }
+.mapa-card.ativo:hover { transform: scale(1.2); }
 .mapa-card.ativo .mapa-card-nome { color: #fff; }
 
-/* legenda do setor em foco, embaixo do carrossel */
-.mapa-setor-sub { position: absolute; left: 0; right: 0; bottom: 21%; z-index: 6; display: flex; justify-content: center; pointer-events: none; }
-.mapa-setor-sub button {
+/* nome do setor em foco — agora dentro do bloco flex centralizado, não mais
+   flutuando com bottom em % (o que descentralizava o conjunto todo) */
+.mapa-setor-nome {
   background: none; border: 0; font-size: 12.5px; letter-spacing: 0.22em; text-transform: uppercase;
-  color: rgb(var(--m-texto-3)); font-family: var(--m-display); pointer-events: auto;
+  color: rgb(var(--m-texto-3)); font-family: var(--m-display);
 }
-.mapa-setor-sub button:hover { color: rgb(var(--m-texto)); }
+.mapa-setor-nome:hover { color: rgb(var(--m-texto)); }
 
 .mapa-navs {
-  position: absolute; left: 50%; bottom: 9%; z-index: 20; transform: translateX(-50%);
   display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 999px;
 }
 .mapa-nav-btn {
@@ -186,15 +172,6 @@
 }
 .mapa-nav-btn.ativo:hover { background: color-mix(in srgb, var(--c) 22%, transparent); }
 .mapa-nav-btn.ativo .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
-
-/* bolinhas de paginação — controladas pelo próprio Swiper (módulo Pagination),
-   só restilizadas pra bater com o resto do painel */
-.mapa-pontinhos { position: absolute; left: 0; right: 0; bottom: 4%; z-index: 20; display: flex; justify-content: center; gap: 7px; }
-.mapa-pontinhos .swiper-pagination-bullet {
-  width: 5px; height: 5px; margin: 0; border-radius: 50%; background: rgb(var(--m-texto-3)); opacity: 0.4;
-  transition: all 0.25s ease; display: inline-block; cursor: pointer;
-}
-.mapa-pontinhos .swiper-pagination-bullet-active { opacity: 1; background: rgb(var(--m-texto)); width: 16px; border-radius: 3px; }
 
 /* ---------- estado expandido: lista empilhada de funções do setor ---------- */
 .mapa-grade-caixa {
@@ -253,6 +230,5 @@
 @media (max-width: 639px) { .mapa-legenda { display: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .mapa-estrela { animation: none; }
   .mapa-card, .mapa-func { transition: none; }
 }

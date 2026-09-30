@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Search } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { EffectCoverflow, Pagination } from "swiper/modules";
+import { EffectCoverflow } from "swiper/modules";
 import type { Swiper as SwiperClass } from "swiper/types";
 import Layout from "@/components/Layout";
 import { DEPARTAMENTOS, type MapaDepartamento, type MapaFuncao } from "@/lib/mapa/data";
 import "swiper/css";
 import "swiper/css/effect-coverflow";
-import "swiper/css/pagination";
 import "./Mapa.css";
 
 const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -18,31 +18,14 @@ interface Achado {
   dept: MapaDepartamento;
 }
 
-// gerador pseudo-aleatório determinístico (mulberry32) — o antigo usava
-// sin(i*999+n), que forma um rastro/curva visível em vez de espalhar
-// de verdade (artefato clássico de "random" feito com seno em rede fixa)
-function mulberry32(seed: number) {
-  let a = seed;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+// origem do zoom de saída, em % da caixa do Mapa — usado como transform-origin
+interface Portal {
+  ox: number;
+  oy: number;
 }
 
-// estrelas de fundo — geradas uma vez, fora do componente, pra não recalcular a cada render
-const ESTRELAS = (() => {
-  const rnd = mulberry32(20260929);
-  return Array.from({ length: 110 }, () => ({
-    left: rnd() * 100,
-    top: rnd() * 100,
-    size: rnd() < 0.25 ? 2 : 1,
-    delay: rnd() * 6,
-    dur: 4 + rnd() * 5,
-  }));
-})();
+// duração do zoom de entrada num módulo
+const PORTAL_MS = 420;
 
 export default function Mapa() {
   const navigate = useNavigate();
@@ -55,14 +38,27 @@ export default function Mapa() {
   const [busca, setBusca] = useState("");
   const [destaque, setDestaque] = useState<string | null>(null);
   const [telaCheia, setTelaCheia] = useState(false);
+  const [portal, setPortal] = useState<Portal | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<SwiperClass | null>(null);
   const gradeRef = useRef<HTMLDivElement>(null);
   const arrastoRef = useRef<{ y: number; scroll: number } | null>(null);
   const arrastouRef = useRef(false);
+  const destinoRef = useRef<string | null>(null);
   const [arrastando, setArrastando] = useState(false);
 
   const foco = depts[focoIdx];
+
+  // trava o scroll da página enquanto o zoom de saída cresce, pra ele não
+  // estourar o layout e abrir barra de rolagem por uma fração de segundo
+  useEffect(() => {
+    if (!portal) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [portal]);
 
   // arrastar a lista do submenu com o mouse (além da roda/trackpad, que já
   // funciona nativamente por causa do overflow-y: auto)
@@ -110,13 +106,27 @@ export default function Mapa() {
     else sw.slideNext();
   }, []);
 
+  // ao abrir um módulo de verdade, o próprio Mapa dá um zoom gigante a partir
+  // do ponto clicado e desaparece (fade) — só navega depois que ele sumiu
   const abrir = useCallback(
-    (funcao: MapaFuncao) => {
+    (e: React.MouseEvent<HTMLElement>, funcao: MapaFuncao) => {
       if (arrastouRef.current) {
         arrastouRef.current = false;
         return;
       }
-      if (funcao.to) navigate(funcao.to);
+      if (!funcao.to) return;
+      const caixa = boxRef.current?.getBoundingClientRect();
+      const rect = e.currentTarget.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      destinoRef.current = funcao.to;
+      setPortal({
+        ox: caixa ? ((cx - caixa.left) / caixa.width) * 100 : 50,
+        oy: caixa ? ((cy - caixa.top) / caixa.height) * 100 : 50,
+      });
+      setTimeout(() => {
+        if (destinoRef.current) navigate(destinoRef.current);
+      }, PORTAL_MS);
     },
     [navigate]
   );
@@ -129,14 +139,30 @@ export default function Mapa() {
   }, []);
 
   const abrirDestaque = useCallback(
-    (achado: Achado) => {
+    (e: React.MouseEvent<HTMLElement>, achado: Achado) => {
+      if (achado.funcao.to) {
+        // já é uma rota de verdade — mesmo zoom de saída usado na grade
+        const caixa = boxRef.current?.getBoundingClientRect();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        destinoRef.current = achado.funcao.to;
+        setPortal({
+          ox: caixa ? ((cx - caixa.left) / caixa.width) * 100 : 50,
+          oy: caixa ? ((cy - caixa.top) / caixa.height) * 100 : 50,
+        });
+        setBusca("");
+        setTimeout(() => {
+          if (destinoRef.current) navigate(destinoRef.current);
+        }, PORTAL_MS);
+        return;
+      }
       const i = depts.findIndex((x) => x.id === achado.dept.id);
       if (i >= 0) irParaDept(i, true);
       setDestaque(achado.funcao.nome);
       setBusca("");
-      if (achado.funcao.to) navigate(achado.funcao.to);
     },
-    [depts, navigate, irParaDept]
+    [depts, irParaDept, navigate]
   );
 
   // teclado: setas giram o carrossel; Esc fecha a grade expandida ou a busca
@@ -188,66 +214,52 @@ export default function Mapa() {
 
   return (
     <Layout>
-      <div className="mapa" ref={boxRef}>
-        <div className="mapa-estrelas" aria-hidden="true">
-          {ESTRELAS.map((s, i) => (
-            <span
-              key={i}
-              className="mapa-estrela"
-              style={{
-                left: `${s.left}%`,
-                top: `${s.top}%`,
-                width: s.size,
-                height: s.size,
-                animationDelay: `${s.delay.toFixed(2)}s`,
-                animationDuration: `${s.dur.toFixed(2)}s`,
-              }}
-            />
-          ))}
-        </div>
-
+      <motion.div
+        className="mapa"
+        ref={boxRef}
+        style={{ transformOrigin: portal ? `${portal.ox}% ${portal.oy}%` : "50% 50%" }}
+        animate={{ opacity: portal ? 0 : 1, scale: portal ? 9 : 1 }}
+        transition={{ duration: PORTAL_MS / 1000, ease: [0.64, 0, 0.78, 0] }}
+      >
         <div className="mapa-topo">
           <button type="button" className="mapa-vidro mapa-btn" onClick={telaCheiaToggle} aria-label="Alternar tela cheia">
             {telaCheia ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
           </button>
 
           {!expandido ? (
-            <>
-              <div className="mapa-busca-caixa">
-                <label className="mapa-vidro mapa-busca">
-                  <Search size={15} />
-                  <input
-                    value={busca}
-                    onChange={(e) => setBusca(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && achados.length === 1) {
-                        e.stopPropagation();
-                        abrirDestaque(achados[0]);
-                      }
-                      if (e.key === "Escape") setBusca("");
-                    }}
-                    placeholder={`buscar ${total} funções · SDR, convites, Pronet, álbuns…`}
-                    aria-label="Buscar funções no mapa"
-                    autoComplete="off"
-                    spellCheck={false}
-                  />
-                  {termo && <span className="mapa-busca-n">{achados.length}</span>}
-                </label>
-                {termo && (
-                  <div className="mapa-busca-lista mapa-vidro">
-                    {achados.length === 0 && <div className="mapa-busca-vazio">nada encontrado</div>}
-                    {achados.map((a) => (
-                      <button key={a.funcao.nome} type="button" onClick={() => abrirDestaque(a)}>
-                        <i style={{ "--c": a.dept.cor } as CSSProperties} className={a.funcao.status} />
-                        <span className="nm">{a.funcao.nome}</span>
-                        <span className="dp">{a.dept.nome}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <span className="mapa-aba">MAPA</span>
-            </>
+            <div className="mapa-busca-caixa">
+              <label className="mapa-vidro mapa-busca">
+                <Search size={15} />
+                <input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && achados.length === 1) {
+                      e.stopPropagation();
+                      abrirDestaque(e as unknown as React.MouseEvent<HTMLElement>, achados[0]);
+                    }
+                    if (e.key === "Escape") setBusca("");
+                  }}
+                  placeholder={`buscar ${total} funções · SDR, convites, Pronet, álbuns…`}
+                  aria-label="Buscar funções no mapa"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                {termo && <span className="mapa-busca-n">{achados.length}</span>}
+              </label>
+              {termo && (
+                <div className="mapa-busca-lista mapa-vidro">
+                  {achados.length === 0 && <div className="mapa-busca-vazio">nada encontrado</div>}
+                  {achados.map((a) => (
+                    <button key={a.funcao.nome} type="button" onClick={(e) => abrirDestaque(e, a)}>
+                      <i style={{ "--c": a.dept.cor } as CSSProperties} className={a.funcao.status} />
+                      <span className="nm">{a.funcao.nome}</span>
+                      <span className="dp">{a.dept.nome}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             <>
               <div className="mapa-trilha mapa-vidro">
@@ -264,46 +276,70 @@ export default function Mapa() {
 
         <div className="mapa-viewport">
           {!expandido ? (
-            <div className="mapa-carrossel-caixa">
-              <div className="mapa-ambiente" style={{ "--c": foco.cor } as CSSProperties} />
-              <Swiper
-                modules={[EffectCoverflow, Pagination]}
-                effect="coverflow"
-                grabCursor
-                centeredSlides
-                loop
-                slidesPerView="auto"
-                spaceBetween={30}
-                coverflowEffect={{ rotate: 18, stretch: 20, depth: 110, modifier: 1, slideShadows: false }}
-                pagination={{ clickable: true, el: ".mapa-pontinhos" }}
-                onSwiper={(sw) => {
-                  swiperRef.current = sw;
-                  sw.slideToLoop(focoInicial, 0, false);
-                }}
-                onSlideChange={(sw) => setFocoIdx(sw.realIndex)}
-                className="mapa-swiper"
-              >
-                {depts.map((d, i) => {
-                  const Icon = d.icon;
-                  return (
-                    <SwiperSlide key={d.id} className="mapa-slide">
-                      <button
-                        type="button"
-                        className={`mapa-card${i === focoIdx ? " ativo" : ""}`}
-                        style={{ "--c": d.cor } as CSSProperties}
-                        onClick={() => cliqueCard(i)}
-                        aria-label={i === focoIdx ? `Abrir ${d.nome}` : `Focar ${d.nome}`}
-                      >
-                        <span className="mapa-card-icone">
-                          <Icon strokeWidth={1.5} />
-                        </span>
-                        <span className="mapa-card-nome">{d.nome}</span>
-                        <span className="mapa-card-sub">{d.sub}</span>
-                      </button>
-                    </SwiperSlide>
-                  );
-                })}
-              </Swiper>
+            <div className="mapa-palco">
+              <div className="mapa-carrossel-caixa">
+                <div className="mapa-ambiente" style={{ "--c": foco.cor } as CSSProperties} />
+                <Swiper
+                  modules={[EffectCoverflow]}
+                  effect="coverflow"
+                  grabCursor
+                  centeredSlides
+                  loop
+                  speed={650}
+                  slidesPerView="auto"
+                  spaceBetween={30}
+                  coverflowEffect={{ rotate: 18, stretch: 20, depth: 110, modifier: 1, slideShadows: false }}
+                  onSwiper={(sw) => {
+                    swiperRef.current = sw;
+                    sw.slideToLoop(focoInicial, 0, false);
+                  }}
+                  onSlideChange={(sw) => setFocoIdx(sw.realIndex)}
+                  className="mapa-swiper"
+                >
+                  {depts.map((d, i) => {
+                    const Icon = d.icon;
+                    return (
+                      <SwiperSlide key={d.id} className="mapa-slide">
+                        <button
+                          type="button"
+                          className={`mapa-card${i === focoIdx ? " ativo" : ""}`}
+                          style={{ "--c": d.cor } as CSSProperties}
+                          onClick={() => cliqueCard(i)}
+                          aria-label={i === focoIdx ? `Abrir ${d.nome}` : `Focar ${d.nome}`}
+                        >
+                          <span className="mapa-card-icone">
+                            <Icon strokeWidth={1.5} />
+                          </span>
+                          <span className="mapa-card-nome">{d.nome}</span>
+                          <span className="mapa-card-sub">{d.sub}</span>
+                        </button>
+                      </SwiperSlide>
+                    );
+                  })}
+                </Swiper>
+              </div>
+
+              <button type="button" className="mapa-setor-nome" onClick={() => setExpandido(true)}>
+                {foco.nome}
+              </button>
+
+              <div className="mapa-navs mapa-vidro">
+                <button type="button" className="mapa-nav-btn" onClick={() => irPara(-1)} aria-label="Departamento anterior">
+                  <ChevronLeft size={17} strokeWidth={1.6} />
+                </button>
+                <button
+                  type="button"
+                  className="mapa-nav-btn ativo"
+                  style={{ "--c": foco.cor } as CSSProperties}
+                  onClick={() => setExpandido(true)}
+                  aria-label={`Abrir ${foco.nome}`}
+                >
+                  <span className="ponto" />
+                </button>
+                <button type="button" className="mapa-nav-btn" onClick={() => irPara(1)} aria-label="Próximo departamento">
+                  <ChevronRight size={17} strokeWidth={1.6} />
+                </button>
+              </div>
             </div>
           ) : (
             <div
@@ -317,7 +353,7 @@ export default function Mapa() {
                   key={f.nome}
                   className={`mapa-func${destaque === f.nome ? " destaque" : ""}${f.to ? " link" : ""}`}
                   style={{ "--c": foco.cor } as CSSProperties}
-                  onClick={() => abrir(f)}
+                  onClick={(e) => abrir(e, f)}
                 >
                   <span className="n">
                     <i className={f.status === "dev" ? "dev" : ""} />
@@ -330,41 +366,13 @@ export default function Mapa() {
           )}
         </div>
 
-        {!expandido ? (
-          <>
-            <div className="mapa-setor-sub">
-              <button type="button" onClick={() => setExpandido(true)}>
-                {foco.nome}
-              </button>
-            </div>
-            <div className="mapa-navs mapa-vidro">
-              <button type="button" className="mapa-nav-btn" onClick={() => irPara(-1)} aria-label="Departamento anterior">
-                <ChevronLeft size={17} strokeWidth={1.6} />
-              </button>
-              <button
-                type="button"
-                className="mapa-nav-btn ativo"
-                style={{ "--c": foco.cor } as CSSProperties}
-                onClick={() => setExpandido(true)}
-                aria-label={`Abrir ${foco.nome}`}
-              >
-                <span className="ponto" />
-              </button>
-              <button type="button" className="mapa-nav-btn" onClick={() => irPara(1)} aria-label="Próximo departamento">
-                <ChevronRight size={17} strokeWidth={1.6} />
-              </button>
-            </div>
-            <div className="mapa-pontinhos" />
-          </>
-        ) : null}
-
         {!expandido && (
           <div className="mapa-vidro mapa-legenda">
             <span><i />Em produção</span>
             <span><i className="vazado" />Em desenvolvimento</span>
           </div>
         )}
-      </div>
+      </motion.div>
     </Layout>
   );
 }
