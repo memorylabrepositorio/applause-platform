@@ -272,8 +272,8 @@ export default function Mapa() {
                     loop
                     speed={650}
                     slidesPerView="auto"
-                    spaceBetween={30}
-                    coverflowEffect={{ rotate: 18, stretch: 20, depth: 110, modifier: 1, slideShadows: false }}
+                    spaceBetween={16}
+                    coverflowEffect={{ rotate: 12, stretch: 6, depth: 70, modifier: 1, slideShadows: false }}
                     onSwiper={(sw) => {
                       swiperRef.current = sw;
                       sw.slideToLoop(focoInicial, 0, false);
