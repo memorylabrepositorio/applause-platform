@@ -118,25 +118,31 @@
    palco — carrossel Swiper.js (efeito coverflow oficial) em modo compacto,
    e grade simples de cards pro estado expandido de um departamento.
    --------------------------------------------------------------------- */
-.mapa-viewport { position: absolute; inset: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 0 16px; }
+.mapa-viewport { position: absolute; inset: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 0 32px; }
 
-.mapa-carrossel-caixa { position: relative; width: 100%; max-width: 640px; }
+.mapa-carrossel-caixa { position: relative; width: 100%; max-width: 760px; }
 .mapa-ambiente {
   position: absolute; inset: -30% -10%; z-index: -1; pointer-events: none;
   background: radial-gradient(ellipse 46% 55% at 50% 54%, color-mix(in srgb, var(--c) 13%, transparent), transparent 70%);
   transition: background 0.6s ease;
 }
 
-.mapa-swiper { width: 100%; padding: 10px 0 6px; }
-.mapa-swiper .swiper-slide { width: 168px; height: 220px; }
+.mapa-swiper { width: 100%; padding: 20px 0 16px; overflow: visible; }
+.mapa-swiper .swiper-slide { width: 168px; height: 220px; display: flex; align-items: center; justify-content: center; }
 
 .mapa-card {
-  width: 100%; height: 100%; padding: 0; border: 0; border-radius: 18px;
+  width: 90%; height: 90%; padding: 0; border: 0; border-radius: 18px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   background: linear-gradient(160deg, color-mix(in srgb, var(--c) 20%, transparent), var(--m-vidro));
   border: 1px solid color-mix(in srgb, var(--c) 35%, var(--m-linha));
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  transform: scale(1);
+}
+.mapa-card:hover {
+  border-color: color-mix(in srgb, var(--c) 55%, transparent);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--c) 22%, transparent);
+  transform: scale(1.05);
 }
 .mapa-card-icone {
   width: 54px; height: 54px; border-radius: 50%; flex-shrink: 0;
@@ -151,7 +157,9 @@
 .mapa-card.ativo {
   border-color: color-mix(in srgb, var(--c) 70%, transparent);
   box-shadow: 0 0 32px color-mix(in srgb, var(--c) 30%, transparent);
+  transform: scale(1.08);
 }
+.mapa-card.ativo:hover { transform: scale(1.1); }
 .mapa-card.ativo .mapa-card-nome { color: #fff; }
 
 /* legenda do setor em foco, embaixo do carrossel */
@@ -188,27 +196,29 @@
 }
 .mapa-pontinhos .swiper-pagination-bullet-active { opacity: 1; background: rgb(var(--m-texto)); width: 16px; border-radius: 3px; }
 
-/* ---------- estado expandido: grade de funções do setor ---------- */
+/* ---------- estado expandido: lista empilhada de funções do setor ---------- */
 .mapa-grade-caixa {
-  width: 100%; max-width: 1160px; height: 100%; padding: 76px 8px 24px;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;
-  align-content: start; overflow-y: auto;
+  width: 100%; max-width: 640px; height: 100%; margin: 0 auto; padding: 84px 8px 28px;
+  display: flex; flex-direction: column; gap: 16px;
+  overflow-y: auto; cursor: grab;
 }
+.mapa-grade-caixa.arrastando { cursor: grabbing; user-select: none; }
 .mapa-func {
-  width: 100%; padding: 14px 16px; border-radius: 13px; text-align: left;
+  width: 100%; padding: 20px 24px; border-radius: 16px; text-align: left;
   background: var(--m-vidro); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--m-linha);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 .mapa-func:not(.link) { cursor: default; }
 .mapa-func:hover,
-.mapa-func.destaque { transform: scale(1.02); border-color: color-mix(in srgb, var(--c) 55%, transparent); }
+.mapa-func.destaque { transform: scale(1.015); border-color: color-mix(in srgb, var(--c) 55%, transparent); }
+.mapa-func:hover { box-shadow: 0 0 22px color-mix(in srgb, var(--c) 20%, transparent); }
 .mapa-func.destaque { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), 0 0 28px color-mix(in srgb, var(--c) 45%, transparent); animation: mapa-pulso 1.1s ease-in-out 2; }
 @keyframes mapa-pulso { 50% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 75%, transparent), 0 0 42px color-mix(in srgb, var(--c) 65%, transparent); } }
-.mapa-func .n { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgb(var(--m-texto)); line-height: 1.3; }
-.mapa-func .n i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); flex-shrink: 0; }
-.mapa-func .n i.dev { background: transparent; border: 1.3px solid rgb(var(--m-texto-3)); box-shadow: none; }
-.mapa-func .o { display: block; margin-top: 6px; margin-left: 15px; font-size: 10.5px; color: rgb(var(--m-texto-3)); }
+.mapa-func .n { display: flex; align-items: center; gap: 10px; font-size: 15px; color: rgb(var(--m-texto)); line-height: 1.3; }
+.mapa-func .n i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); flex-shrink: 0; }
+.mapa-func .n i.dev { background: transparent; border: 1.4px solid rgb(var(--m-texto-3)); box-shadow: none; }
+.mapa-func .o { display: block; margin-top: 8px; margin-left: 18px; font-size: 11.5px; color: rgb(var(--m-texto-3)); }
 
 .mapa-trilha {
   height: 34px; padding: 0 14px; border-radius: 9px; min-width: 0; flex-shrink: 1;
@@ -227,7 +237,8 @@
   .mapa-voltar .txt { display: none; }
   .mapa-voltar { width: 34px; padding: 0; justify-content: center; }
   .mapa-swiper .swiper-slide { width: 138px; height: 190px; }
-  .mapa-grade-caixa { padding-top: 68px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .mapa-grade-caixa { padding-top: 68px; gap: 12px; }
+  .mapa-func { padding: 16px 18px; }
 }
 
 /* legenda */

@@ -18,17 +18,31 @@ interface Achado {
   dept: MapaDepartamento;
 }
 
-// estrelas de fundo — geradas uma vez, fora do componente, pra não recalcular a cada render
-const ESTRELAS = Array.from({ length: 110 }, (_, i) => {
-  const rnd = (n: number) => ((Math.sin(i * 999 + n) + 1) / 2);
-  return {
-    left: rnd(1) * 100,
-    top: rnd(2) * 100,
-    size: rnd(3) < 0.25 ? 2 : 1,
-    delay: rnd(4) * 6,
-    dur: 4 + rnd(5) * 5,
+// gerador pseudo-aleatório determinístico (mulberry32) — o antigo usava
+// sin(i*999+n), que forma um rastro/curva visível em vez de espalhar
+// de verdade (artefato clássico de "random" feito com seno em rede fixa)
+function mulberry32(seed: number) {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-});
+}
+
+// estrelas de fundo — geradas uma vez, fora do componente, pra não recalcular a cada render
+const ESTRELAS = (() => {
+  const rnd = mulberry32(20260929);
+  return Array.from({ length: 110 }, () => ({
+    left: rnd() * 100,
+    top: rnd() * 100,
+    size: rnd() < 0.25 ? 2 : 1,
+    delay: rnd() * 6,
+    dur: 4 + rnd() * 5,
+  }));
+})();
 
 export default function Mapa() {
   const navigate = useNavigate();
@@ -43,8 +57,45 @@ export default function Mapa() {
   const [telaCheia, setTelaCheia] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<SwiperClass | null>(null);
+  const gradeRef = useRef<HTMLDivElement>(null);
+  const arrastoRef = useRef<{ y: number; scroll: number } | null>(null);
+  const arrastouRef = useRef(false);
+  const [arrastando, setArrastando] = useState(false);
 
   const foco = depts[focoIdx];
+
+  // arrastar a lista do submenu com o mouse (além da roda/trackpad, que já
+  // funciona nativamente por causa do overflow-y: auto)
+  const onGradeMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const el = gradeRef.current;
+    if (!el) return;
+    arrastoRef.current = { y: e.clientY, scroll: el.scrollTop };
+    arrastouRef.current = false;
+    setArrastando(true);
+  }, []);
+
+  useEffect(() => {
+    if (!arrastando) return;
+    function onMove(e: MouseEvent) {
+      const el = gradeRef.current;
+      const inicio = arrastoRef.current;
+      if (!el || !inicio) return;
+      const delta = e.clientY - inicio.y;
+      if (Math.abs(delta) > 4) arrastouRef.current = true;
+      el.scrollTop = inicio.scroll - delta;
+    }
+    function onUp() {
+      setArrastando(false);
+      arrastoRef.current = null;
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [arrastando]);
 
   useEffect(() => {
     const onFs = () => setTelaCheia(document.fullscreenElement === boxRef.current);
@@ -61,6 +112,10 @@ export default function Mapa() {
 
   const abrir = useCallback(
     (funcao: MapaFuncao) => {
+      if (arrastouRef.current) {
+        arrastouRef.current = false;
+        return;
+      }
       if (funcao.to) navigate(funcao.to);
     },
     [navigate]
@@ -218,7 +273,8 @@ export default function Mapa() {
                 centeredSlides
                 loop
                 slidesPerView="auto"
-                coverflowEffect={{ rotate: 28, stretch: 0, depth: 140, modifier: 1, slideShadows: false }}
+                spaceBetween={30}
+                coverflowEffect={{ rotate: 18, stretch: 20, depth: 110, modifier: 1, slideShadows: false }}
                 pagination={{ clickable: true, el: ".mapa-pontinhos" }}
                 onSwiper={(sw) => {
                   swiperRef.current = sw;
@@ -250,7 +306,11 @@ export default function Mapa() {
               </Swiper>
             </div>
           ) : (
-            <div className="mapa-grade-caixa">
+            <div
+              className={`mapa-grade-caixa${arrastando ? " arrastando" : ""}`}
+              ref={gradeRef}
+              onMouseDown={onGradeMouseDown}
+            >
               {foco.ramos.flat().map((f) => (
                 <button
                   type="button"
