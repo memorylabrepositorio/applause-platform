@@ -131,6 +131,24 @@ export default function Mapa() {
     [navigate]
   );
 
+  // mesmo zoom de saída, mas pra abrir o submenu do setor (sem navegar pra
+  // fora da página) — ao final, troca pra grade e volta a encolher, como se
+  // estivesse "pousando" dentro do módulo
+  const abrirExpandido = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    const caixa = boxRef.current?.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    setPortal({
+      ox: caixa ? ((cx - caixa.left) / caixa.width) * 100 : 50,
+      oy: caixa ? ((cy - caixa.top) / caixa.height) * 100 : 50,
+    });
+    setTimeout(() => {
+      setExpandido(true);
+      setPortal(null);
+    }, PORTAL_MS);
+  }, []);
+
   const irParaDept = useCallback((i: number, abrirDireto = false) => {
     const sw = swiperRef.current;
     if (sw) sw.slideToLoop(i);
@@ -207,8 +225,8 @@ export default function Mapa() {
     else el.requestFullscreen?.().catch(() => undefined);
   }
 
-  function cliqueCard(i: number) {
-    if (i === focoIdx) setExpandido(true);
+  function cliqueCard(e: React.MouseEvent<HTMLButtonElement>, i: number) {
+    if (i === focoIdx) abrirExpandido(e);
     else irParaDept(i);
   }
 
@@ -304,7 +322,7 @@ export default function Mapa() {
                           type="button"
                           className={`mapa-card${i === focoIdx ? " ativo" : ""}`}
                           style={{ "--c": d.cor } as CSSProperties}
-                          onClick={() => cliqueCard(i)}
+                          onClick={(e) => cliqueCard(e, i)}
                           aria-label={i === focoIdx ? `Abrir ${d.nome}` : `Focar ${d.nome}`}
                         >
                           <span className="mapa-card-icone">
@@ -319,7 +337,7 @@ export default function Mapa() {
                 </Swiper>
               </div>
 
-              <button type="button" className="mapa-setor-nome" onClick={() => setExpandido(true)}>
+              <button type="button" className="mapa-setor-nome" onClick={abrirExpandido}>
                 {foco.nome}
               </button>
 
@@ -331,7 +349,7 @@ export default function Mapa() {
                   type="button"
                   className="mapa-nav-btn ativo"
                   style={{ "--c": foco.cor } as CSSProperties}
-                  onClick={() => setExpandido(true)}
+                  onClick={abrirExpandido}
                   aria-label={`Abrir ${foco.nome}`}
                 >
                   <span className="ponto" />
