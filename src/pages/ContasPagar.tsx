@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
+import UltimaAtualizacao from "@/components/UltimaAtualizacao";
 import { atualizarConta, criarConta, excluirConta, loadContasPagar } from "@/lib/contaspagar/fetch";
 import {
   EMPTY_FILTERS,
@@ -183,6 +184,7 @@ export default function ContasPagar() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <UltimaAtualizacao tabelas={["contas_pagar"]} />
           <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
             ↻ Atualizar
           </button>

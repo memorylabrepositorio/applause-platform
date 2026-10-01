@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
+import UltimaAtualizacao from "@/components/UltimaAtualizacao";
 import { loadLucroPorContrato } from "@/lib/lucro/fetch";
 import { EMPTY_FILTERS, applyFilters, fmtBRL, type LucroFilters, type LucroPorContrato } from "@/lib/lucro/engine";
 
@@ -61,6 +62,7 @@ export default function Lucro() {
           <p className="text-sm text-ink-400">Contrato de formatura + PDV − contas a pagar</p>
         </div>
         <div className="flex items-center gap-3">
+          <UltimaAtualizacao tabelas={["contratos", "financeiro_parcelas", "contas_pagar"]} />
           <Link to="/contas-pagar" className="text-sm text-ink-300 hover:text-ink-50">
             ← Contas a pagar
           </Link>

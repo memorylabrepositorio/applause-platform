@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Layout from "@/components/Layout";
+import UltimaAtualizacao from "@/components/UltimaAtualizacao";
 import { loadFreelancersStaffData, type FreelancersStaffData } from "@/lib/freelancers/fetch";
 import { atualizarStatusFreelancer, atualizarStatusVaga, criarVaga, decidirCandidatura } from "@/lib/freelancers/actions";
 import {
@@ -104,12 +105,15 @@ export default function EstudioFreelancers() {
 
   return (
     <Layout>
-      <header className="mb-4">
-        <h1 className="text-xl font-semibold">Freelancers — Estúdio</h1>
-        <p className="text-sm text-ink-400">
-          {data.freelancers.length} cadastrados · {data.vagas.filter((v) => v.status === "aberta").length} vagas abertas ·{" "}
-          {pendentes.length} candidatura(s) pendente(s)
-        </p>
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Freelancers — Estúdio</h1>
+          <p className="text-sm text-ink-400">
+            {data.freelancers.length} cadastrados · {data.vagas.filter((v) => v.status === "aberta").length} vagas abertas ·{" "}
+            {pendentes.length} candidatura(s) pendente(s)
+          </p>
+        </div>
+        <UltimaAtualizacao tabelas={["freelancers", "vagas_freelancer", "candidaturas_freelancer"]} />
       </header>
 
       <div className="mb-4 flex gap-1 border-b border-ink-800">

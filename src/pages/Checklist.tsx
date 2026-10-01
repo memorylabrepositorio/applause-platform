@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
+import UltimaAtualizacao from "@/components/UltimaAtualizacao";
 import { loadContratos, loadEventos, createChecklistFromContrato, updateChecklist, deleteChecklist } from "@/lib/checklist/fetch";
 import {
   ALL_FIELD_KEYS,
@@ -302,6 +303,7 @@ export default function Checklist() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <UltimaAtualizacao tabelas={["checklist_eventos", "contratos"]} />
           <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
             ↻ Atualizar
           </button>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Copy, ExternalLink, QrCode, Receipt } from "lucide-react";
 import Layout from "@/components/Layout";
+import UltimaAtualizacao from "@/components/UltimaAtualizacao";
 import {
   atualizarParcela,
   criarParcela,
@@ -272,6 +273,7 @@ export default function Financeiro() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <UltimaAtualizacao tabelas={["financeiro_parcelas", "clientes", "contratos"]} />
           <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
             ↻ Atualizar
           </button>

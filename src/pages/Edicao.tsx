@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Layout from "@/components/Layout";
+import UltimaAtualizacao from "@/components/UltimaAtualizacao";
 import { loadEdicaoData } from "@/lib/edicao/fetch";
 import {
   EMPTY_FILTERS,
@@ -97,9 +98,12 @@ export default function Edicao() {
             {statusText}
           </p>
         </div>
-        <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
-          ↻ Atualizar
-        </button>
+        <div className="flex items-center gap-3">
+          <UltimaAtualizacao tabelas={["producao_edicao", "funil_albuns"]} />
+          <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
+            ↻ Atualizar
+          </button>
+        </div>
       </header>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">

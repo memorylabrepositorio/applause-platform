@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Layout from "@/components/Layout";
+import UltimaAtualizacao from "@/components/UltimaAtualizacao";
 import {
   BarChart,
   Bar,
@@ -656,6 +657,8 @@ export default function Vendas() {
             {dataMaisRecente && <> · dados até {dataMaisRecente}</>}
           </p>
         </div>
+        <div className="flex items-center gap-3">
+        <UltimaAtualizacao tabelas={["vendas", "contratos", "clientes", "agenda"]} />
         <div className="relative">
           <button
             onClick={() => setExportOpen((v) => !v)}
@@ -698,6 +701,7 @@ export default function Vendas() {
               </div>
             </>
           )}
+        </div>
         </div>
       </header>
 

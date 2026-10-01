@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
+import UltimaAtualizacao from "@/components/UltimaAtualizacao";
 import { loadAtendimentoData } from "@/lib/atendimento/fetch";
 import { fmtDateBR, type Aluno } from "@/lib/atendimento/engine";
 import {
@@ -192,6 +193,7 @@ export default function Sdr() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <UltimaAtualizacao tabelas={["sdr_lembretes", "sdr_conversas", "contratos", "clientes", "agenda"]} />
           <button
             onClick={() => handleSaveConfig({ ativo: !config.ativo })}
             disabled={savingConfig}
