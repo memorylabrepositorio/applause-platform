@@ -31,8 +31,19 @@ import {
   type ParcelaEnriquecida,
   type StatusParcela,
 } from "@/lib/financeiro/engine";
+import { loadInadimplenciaData } from "@/lib/inadimplencia/fetch";
+import {
+  EMPTY_INAD_FILTERS,
+  applyInadimplenciaFilters,
+  computeInadimplenciaKpis,
+  fmtPct,
+  listarContratos,
+  type InadimplenciaFilters,
+  type InadimplenciaResumo,
+} from "@/lib/inadimplencia/engine";
 
 type StatusKind = "ok" | "err" | null;
+type Aba = "receber" | "inadimplencia";
 
 const FORMAS: FormaPagamento[] = ["pix", "boleto", "cartao", "dinheiro", "outro"];
 const FORMA_LABEL: Record<FormaPagamento, string> = {
@@ -63,6 +74,10 @@ export default function Financeiro() {
   const [statusKind, setStatusKind] = useState<StatusKind>(null);
   const [statusText, setStatusText] = useState("Carregando…");
 
+  const [aba, setAba] = useState<Aba>("receber");
+  const [inadimplencia, setInadimplencia] = useState<InadimplenciaResumo[]>([]);
+  const [inadFilters, setInadFilters] = useState<InadimplenciaFilters>(EMPTY_INAD_FILTERS);
+
   const [filters, setFilters] = useState<FinanceiroFilters>(EMPTY_FILTERS);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -87,6 +102,11 @@ export default function Financeiro() {
       setContratos(data.contratos);
       setStatusKind("ok");
       setStatusText("Atualizado " + new Date().toLocaleTimeString("pt-BR"));
+      // a aba de inadimplência é um extra — se falhar, não derruba o
+      // carregamento principal de contas a receber
+      loadInadimplenciaData()
+        .then(setInadimplencia)
+        .catch(() => setInadimplencia([]));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Falha ao carregar dados";
       setLoadError(msg);
@@ -105,6 +125,15 @@ export default function Financeiro() {
   );
 
   const kpis = useMemo(() => computeKpis(enriquecidas), [enriquecidas]);
+
+  const inadKpis = useMemo(() => computeInadimplenciaKpis(inadimplencia), [inadimplencia]);
+
+  const inadFiltradas = useMemo(() => {
+    const rows = applyInadimplenciaFilters(inadimplencia, inadFilters);
+    return [...rows].sort((a, b) => b.percentual_inadimplente - a.percentual_inadimplente);
+  }, [inadimplencia, inadFilters]);
+
+  const inadContratos = useMemo(() => listarContratos(inadimplencia), [inadimplencia]);
 
   const filtradas = useMemo(() => {
     const rows = applyFilters(enriquecidas, filters);
@@ -286,13 +315,51 @@ export default function Financeiro() {
         </div>
       </header>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Total contratado" value={fmtBRL(kpis.totalContratado)} />
         <Kpi label="Recebido" value={fmtBRL(kpis.totalRecebido)} tone="emerald" />
         <Kpi label="Em aberto (em dia)" value={fmtBRL(kpis.totalEmAberto)} tone="slate" />
         <Kpi label="Vencido" value={fmtBRL(kpis.totalVencido)} tone="red" />
       </div>
 
+      {inadimplencia.length > 0 && (
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Kpi label="Inadimplência (Pronet)" value={fmtBRL(inadKpis.totalInadimplente)} tone="red" />
+          <Kpi label="% inadimplência média" value={fmtPct(inadKpis.percentualMedio)} tone="red" />
+          <Kpi label="Contratos afetados" value={String(inadKpis.contratosAfetados)} tone="slate" />
+          <Kpi label="Registros inadimplentes" value={String(inadKpis.registrosInadimplentes)} tone="slate" />
+        </div>
+      )}
+
+      <div className="mb-4 flex gap-1 border-b border-ink-800">
+        {(
+          [
+            ["receber", "Contas a Receber"],
+            ["inadimplencia", `Inadimplência${inadimplencia.length ? ` (${inadKpis.registrosInadimplentes})` : ""}`],
+          ] as [Aba, string][]
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setAba(id)}
+            className={`rounded-t-md px-3 py-2 text-sm ${
+              aba === id ? "border-b-2 border-brand-500 text-ink-50" : "text-ink-400 hover:text-ink-100"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {aba === "inadimplencia" ? (
+        <InadimplenciaTab
+          rows={inadFiltradas}
+          filters={inadFilters}
+          setFilters={setInadFilters}
+          referenciaEm={inadKpis.referenciaEm}
+          contratos={inadContratos}
+        />
+      ) : (
+      <>
       {showForm && (
         <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
           <p className="mb-3 text-sm font-medium text-ink-100">Nova parcela</p>
@@ -617,7 +684,120 @@ export default function Financeiro() {
           </div>
         </div>
       )}
+      </>
+      )}
     </Layout>
+  );
+}
+
+function InadimplenciaTab({
+  rows,
+  filters,
+  setFilters,
+  referenciaEm,
+  contratos,
+}: {
+  rows: InadimplenciaResumo[];
+  filters: InadimplenciaFilters;
+  setFilters: React.Dispatch<React.SetStateAction<InadimplenciaFilters>>;
+  referenciaEm: string | null;
+  contratos: string[];
+}) {
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <select
+          value={filters.contrato}
+          onChange={(e) => setFilters((f) => ({ ...f, contrato: e.target.value }))}
+          className="max-w-[260px] rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
+        >
+          <option value="">Todos os contratos</option>
+          {contratos.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <input
+          value={filters.search}
+          onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+          placeholder="Buscar aluno ou contrato…"
+          className="min-w-[200px] flex-1 rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
+        />
+        <label className="flex items-center gap-1.5 text-sm text-ink-300">
+          <input
+            type="checkbox"
+            checked={filters.apenasInadimplentes}
+            onChange={(e) => setFilters((f) => ({ ...f, apenasInadimplentes: e.target.checked }))}
+          />
+          Só inadimplentes
+        </label>
+        {(filters.search || filters.contrato) && (
+          <button
+            onClick={() => setFilters((f) => ({ ...f, search: "", contrato: "" }))}
+            className="rounded-md border border-ink-600 px-2.5 py-1 text-sm text-ink-300 hover:text-ink-50"
+          >
+            Limpar filtros
+          </button>
+        )}
+        <span className="text-xs text-ink-400">{rows.length} registro(s)</span>
+        {referenciaEm && (
+          <span className="text-xs text-ink-500">
+            · relatório Pronet de {fmtDateBR(referenciaEm)}
+          </span>
+        )}
+      </div>
+
+      <div className="overflow-auto rounded-lg border border-ink-800 bg-ink-850">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-ink-800 text-xs text-ink-400">
+            <tr>
+              <th className="px-2.5 py-1.5">Aluno</th>
+              <th className="px-2.5 py-1.5">Contrato</th>
+              <th className="px-2.5 py-1.5">Contratado</th>
+              <th className="px-2.5 py-1.5">Faturado</th>
+              <th className="px-2.5 py-1.5">Quitado</th>
+              <th className="px-2.5 py-1.5">Inadimplente</th>
+              <th className="px-2.5 py-1.5">% Inad.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {!rows.length && (
+              <tr>
+                <td colSpan={7} className="px-3 py-6 text-center text-ink-400">
+                  Nenhum registro encontrado.
+                </td>
+              </tr>
+            )}
+            {rows.map((r) => (
+              <tr key={r.id} className="border-b border-ink-800/60 hover:bg-ink-800/40">
+                <td className="px-2.5 py-1.5">{r.cliente_nome}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{r.contrato_nro_controle}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{fmtBRL(r.valor_contratado)}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{fmtBRL(r.valor_faturado)}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{fmtBRL(r.valor_quitado)}</td>
+                <td className="px-2.5 py-1.5">
+                  {r.valor_inadimplente > 0 ? (
+                    <span className="text-red-400">{fmtBRL(r.valor_inadimplente)}</span>
+                  ) : (
+                    <span className="text-ink-500">—</span>
+                  )}
+                </td>
+                <td className="px-2.5 py-1.5">
+                  <span
+                    className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-xs ${
+                      r.percentual_inadimplente > 0
+                        ? "border-red-800 bg-red-950 text-red-300"
+                        : "border-emerald-800 bg-emerald-950 text-emerald-300"
+                    }`}
+                  >
+                    {fmtPct(r.percentual_inadimplente)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
