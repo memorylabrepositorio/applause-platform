@@ -12,14 +12,8 @@ export interface FinanceiroData {
 async function loadFinanceiroDataUncached(): Promise<FinanceiroData> {
   const [parcelas, clientesRaw, contratosRaw] = await Promise.all([
     fetchAllRows<Parcela>("financeiro_parcelas"),
-    fetchAllRows<{ codigo: number; nome_cliente: string; telefone: string | null; nro_controle: string | null }>(
-      "clientes",
-      "codigo,nome_cliente,telefone,nro_controle"
-    ),
-    fetchAllRows<{ nro_controle: string; instituicao: string; curso: string }>(
-      "contratos",
-      "nro_controle,instituicao,curso"
-    ),
+    fetchAllRows<ClienteRef>("clientes", "codigo,nome_cliente,telefone,nro_controle,cpf,status,tipo"),
+    fetchAllRows<ContratoRef>("contratos", "nro_controle,instituicao,curso,ano_periodo"),
   ]);
   const clientes: ClienteRef[] = clientesRaw;
   const contratos: ContratoRef[] = contratosRaw;

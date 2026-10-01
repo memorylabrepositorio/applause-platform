@@ -46,12 +46,16 @@ export interface ClienteRef {
   nome_cliente: string;
   telefone: string | null;
   nro_controle: string | null;
+  cpf?: string | null;
+  status?: string | null;
+  tipo?: string | null;
 }
 
 export interface ContratoRef {
   nro_controle: string;
   instituicao: string;
   curso: string;
+  ano_periodo?: string | null;
 }
 
 export interface ParcelaEnriquecida extends Parcela {

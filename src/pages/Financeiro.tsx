@@ -35,15 +35,22 @@ import { loadInadimplenciaData } from "@/lib/inadimplencia/fetch";
 import {
   EMPTY_INAD_FILTERS,
   applyInadimplenciaFilters,
+  computeContratoResumo,
   computeInadimplenciaKpis,
+  enriquecerInadimplencia,
   fmtPct,
+  listarAnos,
   listarContratos,
+  type ContratoResumo,
+  type InadimplenciaEnriquecida,
   type InadimplenciaFilters,
   type InadimplenciaResumo,
 } from "@/lib/inadimplencia/engine";
 
 type StatusKind = "ok" | "err" | null;
 type Aba = "receber" | "inadimplencia";
+
+const EMPTY_RECEBER_CONTRATOS_FILTERS: InadimplenciaFilters = { ...EMPTY_INAD_FILTERS, apenasInadimplentes: false };
 
 const FORMAS: FormaPagamento[] = ["pix", "boleto", "cartao", "dinheiro", "outro"];
 const FORMA_LABEL: Record<FormaPagamento, string> = {
@@ -77,6 +84,9 @@ export default function Financeiro() {
   const [aba, setAba] = useState<Aba>("receber");
   const [inadimplencia, setInadimplencia] = useState<InadimplenciaResumo[]>([]);
   const [inadFilters, setInadFilters] = useState<InadimplenciaFilters>(EMPTY_INAD_FILTERS);
+  const [receberFilters, setReceberFilters] = useState<InadimplenciaFilters>(EMPTY_RECEBER_CONTRATOS_FILTERS);
+  const [contratoSelecionado, setContratoSelecionado] = useState<string | null>(null);
+  const [clientePopup, setClientePopup] = useState<InadimplenciaEnriquecida | null>(null);
 
   const [filters, setFilters] = useState<FinanceiroFilters>(EMPTY_FILTERS);
   const [showForm, setShowForm] = useState(false);
@@ -128,12 +138,28 @@ export default function Financeiro() {
 
   const inadKpis = useMemo(() => computeInadimplenciaKpis(inadimplencia), [inadimplencia]);
 
-  const inadFiltradas = useMemo(() => {
-    const rows = applyInadimplenciaFilters(inadimplencia, inadFilters);
-    return [...rows].sort((a, b) => b.percentual_inadimplente - a.percentual_inadimplente);
-  }, [inadimplencia, inadFilters]);
+  const inadEnriquecida = useMemo(
+    () => enriquecerInadimplencia(inadimplencia, contratos, clientes),
+    [inadimplencia, contratos, clientes]
+  );
 
-  const inadContratos = useMemo(() => listarContratos(inadimplencia), [inadimplencia]);
+  const inadFiltradas = useMemo(() => {
+    const rows = applyInadimplenciaFilters(inadEnriquecida, inadFilters);
+    return [...rows].sort((a, b) => b.percentual_inadimplente - a.percentual_inadimplente);
+  }, [inadEnriquecida, inadFilters]);
+
+  const receberFiltradas = useMemo(() => {
+    const rows = applyInadimplenciaFilters(inadEnriquecida, receberFilters);
+    return [...rows].sort((a, b) => a.cliente_nome.localeCompare(b.cliente_nome, "pt-BR"));
+  }, [inadEnriquecida, receberFilters]);
+
+  const inadContratos = useMemo(() => listarContratos(inadEnriquecida), [inadEnriquecida]);
+  const inadAnos = useMemo(() => listarAnos(inadEnriquecida), [inadEnriquecida]);
+
+  const contratoResumo: ContratoResumo | null = useMemo(
+    () => (contratoSelecionado ? computeContratoResumo(inadEnriquecida, contratoSelecionado) : null),
+    [inadEnriquecida, contratoSelecionado]
+  );
 
   const filtradas = useMemo(() => {
     const rows = applyFilters(enriquecidas, filters);
@@ -323,12 +349,43 @@ export default function Financeiro() {
       </div>
 
       {inadimplencia.length > 0 && (
-        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Kpi label="Inadimplência (Pronet)" value={fmtBRL(inadKpis.totalInadimplente)} tone="red" />
-          <Kpi label="% inadimplência média" value={fmtPct(inadKpis.percentualMedio)} tone="red" />
-          <Kpi label="Contratos afetados" value={String(inadKpis.contratosAfetados)} tone="slate" />
-          <Kpi label="Registros inadimplentes" value={String(inadKpis.registrosInadimplentes)} tone="slate" />
-        </div>
+        <>
+          {contratoSelecionado && contratoResumo ? (
+            <div className="mb-2 flex items-center gap-2">
+              <p className="text-sm text-ink-200">
+                Contrato <span className="font-medium text-ink-50">{contratoResumo.contrato}</span>
+                {contratoResumo.instituicao ? ` · ${contratoResumo.instituicao}` : ""}
+                {contratoResumo.curso ? ` · ${contratoResumo.curso}` : ""}
+                {contratoResumo.ano_periodo ? ` · ${contratoResumo.ano_periodo}` : ""}
+                {" · "}
+                {contratoResumo.alunos} aluno(s)
+              </p>
+              <button
+                onClick={() => setContratoSelecionado(null)}
+                className="text-xs text-brand-400 hover:text-brand-300"
+              >
+                ← ver resumo geral
+              </button>
+            </div>
+          ) : null}
+          <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {contratoSelecionado && contratoResumo ? (
+              <>
+                <Kpi label="Contratado" value={fmtBRL(contratoResumo.contratado)} />
+                <Kpi label="Quitado" value={fmtBRL(contratoResumo.quitado)} tone="emerald" />
+                <Kpi label="A receber (pendente)" value={fmtBRL(contratoResumo.pendente)} tone="slate" />
+                <Kpi label="Inadimplente" value={fmtBRL(contratoResumo.inadimplente)} tone="red" />
+              </>
+            ) : (
+              <>
+                <Kpi label="Inadimplência (Pronet)" value={fmtBRL(inadKpis.totalInadimplente)} tone="red" />
+                <Kpi label="% inadimplência média" value={fmtPct(inadKpis.percentualMedio)} tone="red" />
+                <Kpi label="Contratos afetados" value={String(inadKpis.contratosAfetados)} tone="slate" />
+                <Kpi label="Registros inadimplentes" value={String(inadKpis.registrosInadimplentes)} tone="slate" />
+              </>
+            )}
+          </div>
+        </>
       )}
 
       <div className="mb-4 flex gap-1 border-b border-ink-800">
@@ -357,9 +414,31 @@ export default function Financeiro() {
           setFilters={setInadFilters}
           referenciaEm={inadKpis.referenciaEm}
           contratos={inadContratos}
+          anos={inadAnos}
+          onSelecionarContrato={setContratoSelecionado}
+          onAbrirCliente={setClientePopup}
         />
       ) : (
       <>
+      {inadimplencia.length > 0 && (
+        <div className="mb-6">
+          <p className="mb-2 text-sm font-medium text-ink-100">Contratos e valores a receber por aluno</p>
+          <InadimplenciaTab
+            rows={receberFiltradas}
+            filters={receberFilters}
+            setFilters={setReceberFilters}
+            referenciaEm={inadKpis.referenciaEm}
+            contratos={inadContratos}
+            anos={inadAnos}
+            onSelecionarContrato={setContratoSelecionado}
+            onAbrirCliente={setClientePopup}
+            colunaPendenteLabel="Inadimplente"
+          />
+          <p className="mt-2 text-xs text-ink-500">
+            Dados do relatório Pronet (importação). Abaixo, o controle manual de parcelas e cobranças.
+          </p>
+        </div>
+      )}
       {showForm && (
         <div className="mb-4 rounded-lg border border-ink-800 bg-ink-850 p-3">
           <p className="mb-3 text-sm font-medium text-ink-100">Nova parcela</p>
@@ -686,6 +765,57 @@ export default function Financeiro() {
       )}
       </>
       )}
+
+      {clientePopup && (
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/50" onClick={() => setClientePopup(null)}>
+          <div
+            className="w-full max-w-sm rounded-lg border border-ink-800 bg-ink-900 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <p className="text-lg font-medium">{clientePopup.cliente_nome}</p>
+                <p className="text-sm text-ink-400">
+                  {clientePopup.instituicao || "—"} {clientePopup.curso ? `· ${clientePopup.curso}` : ""}
+                </p>
+              </div>
+              <button onClick={() => setClientePopup(null)} className="text-ink-400 hover:text-ink-50">✕</button>
+            </div>
+
+            {clientePopup.clienteEncontrado ? (
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <InfoRow label="Contrato" value={clientePopup.contrato_nro_controle} />
+                <InfoRow label="Ano" value={clientePopup.ano_periodo || "—"} />
+                <InfoRow label="CPF" value={clientePopup.clienteCpf || "—"} />
+                <InfoRow label="Telefone" value={clientePopup.clienteTelefone || "—"} />
+                <InfoRow label="Status" value={clientePopup.clienteStatus || "—"} />
+                <InfoRow label="Tipo" value={clientePopup.clienteTipo || "—"} />
+              </div>
+            ) : (
+              <p className="text-sm text-ink-400">
+                Aluno não encontrado no cadastro de clientes (apenas no relatório Pronet importado).
+              </p>
+            )}
+
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <InfoRow label="Contratado" value={fmtBRL(clientePopup.valor_contratado)} />
+              <InfoRow label="Quitado" value={fmtBRL(clientePopup.valor_quitado)} />
+              <InfoRow label="A receber" value={fmtBRL(clientePopup.valor_pendente)} />
+              <InfoRow label="Inadimplente" value={fmtBRL(clientePopup.valor_inadimplente)} />
+            </div>
+
+            <button
+              onClick={() => {
+                setContratoSelecionado(clientePopup.contrato_nro_controle);
+                setClientePopup(null);
+              }}
+              className="mt-4 w-full rounded-md border border-ink-600 px-2.5 py-1 text-sm text-ink-200 hover:border-ink-500"
+            >
+              Ver resumo do contrato
+            </button>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
@@ -696,12 +826,21 @@ function InadimplenciaTab({
   setFilters,
   referenciaEm,
   contratos,
+  anos,
+  onSelecionarContrato,
+  onAbrirCliente,
+  colunaPendenteLabel = "Inadimplente",
 }: {
-  rows: InadimplenciaResumo[];
+  rows: InadimplenciaEnriquecida[];
   filters: InadimplenciaFilters;
   setFilters: React.Dispatch<React.SetStateAction<InadimplenciaFilters>>;
   referenciaEm: string | null;
   contratos: string[];
+  anos: string[];
+  onSelecionarContrato: (contrato: string) => void;
+  onAbrirCliente: (cliente: InadimplenciaEnriquecida) => void;
+  /** no painel de Contas a Receber queremos "A receber" em vez de "Inadimplente" */
+  colunaPendenteLabel?: string;
 }) {
   return (
     <div>
@@ -714,6 +853,16 @@ function InadimplenciaTab({
           <option value="">Todos os contratos</option>
           {contratos.map((c) => (
             <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <select
+          value={filters.ano}
+          onChange={(e) => setFilters((f) => ({ ...f, ano: e.target.value }))}
+          className="max-w-[140px] rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
+        >
+          <option value="">Todos os anos</option>
+          {anos.map((a) => (
+            <option key={a} value={a}>{a}</option>
           ))}
         </select>
         <input
@@ -730,9 +879,9 @@ function InadimplenciaTab({
           />
           Só inadimplentes
         </label>
-        {(filters.search || filters.contrato) && (
+        {(filters.search || filters.contrato || filters.ano) && (
           <button
-            onClick={() => setFilters((f) => ({ ...f, search: "", contrato: "" }))}
+            onClick={() => setFilters((f) => ({ ...f, search: "", contrato: "", ano: "" }))}
             className="rounded-md border border-ink-600 px-2.5 py-1 text-sm text-ink-300 hover:text-ink-50"
           >
             Limpar filtros
@@ -752,28 +901,46 @@ function InadimplenciaTab({
             <tr>
               <th className="px-2.5 py-1.5">Aluno</th>
               <th className="px-2.5 py-1.5">Contrato</th>
+              <th className="px-2.5 py-1.5">Ano</th>
               <th className="px-2.5 py-1.5">Contratado</th>
-              <th className="px-2.5 py-1.5">Faturado</th>
-              <th className="px-2.5 py-1.5">Quitado</th>
-              <th className="px-2.5 py-1.5">Inadimplente</th>
+              <th className="px-2.5 py-1.5">Quitado (já pago)</th>
+              <th className="px-2.5 py-1.5">A receber</th>
+              <th className="px-2.5 py-1.5">{colunaPendenteLabel}</th>
               <th className="px-2.5 py-1.5">% Inad.</th>
             </tr>
           </thead>
           <tbody>
             {!rows.length && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-ink-400">
+                <td colSpan={8} className="px-3 py-6 text-center text-ink-400">
                   Nenhum registro encontrado.
                 </td>
               </tr>
             )}
             {rows.map((r) => (
               <tr key={r.id} className="border-b border-ink-800/60 hover:bg-ink-800/40">
-                <td className="px-2.5 py-1.5">{r.cliente_nome}</td>
-                <td className="px-2.5 py-1.5 text-ink-300">{r.contrato_nro_controle}</td>
+                <td className="px-2.5 py-1.5">
+                  <button
+                    onClick={() => onAbrirCliente(r)}
+                    className="text-left text-brand-400 hover:text-brand-300 hover:underline"
+                    title="Ver dados cadastrais"
+                  >
+                    {r.cliente_nome}
+                  </button>
+                </td>
+                <td className="px-2.5 py-1.5 text-ink-300">
+                  <button
+                    onClick={() => onSelecionarContrato(r.contrato_nro_controle)}
+                    className="text-left hover:text-brand-300 hover:underline"
+                    title="Ver resumo do contrato"
+                  >
+                    {r.contrato_nro_controle}
+                  </button>
+                </td>
+                <td className="px-2.5 py-1.5 text-ink-300">{r.ano_periodo || "—"}</td>
                 <td className="px-2.5 py-1.5 text-ink-300">{fmtBRL(r.valor_contratado)}</td>
-                <td className="px-2.5 py-1.5 text-ink-300">{fmtBRL(r.valor_faturado)}</td>
-                <td className="px-2.5 py-1.5 text-ink-300">{fmtBRL(r.valor_quitado)}</td>
+                <td className="px-2.5 py-1.5 text-emerald-400">{fmtBRL(r.valor_quitado)}</td>
+                <td className="px-2.5 py-1.5 text-ink-300">{fmtBRL(r.valor_pendente)}</td>
                 <td className="px-2.5 py-1.5">
                   {r.valor_inadimplente > 0 ? (
                     <span className="text-red-400">{fmtBRL(r.valor_inadimplente)}</span>
