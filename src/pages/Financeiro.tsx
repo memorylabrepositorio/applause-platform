@@ -186,6 +186,18 @@ export default function Financeiro() {
   const resumoPorContrato = useMemo(() => listarResumoPorContrato(inadDoAno), [inadDoAno]);
   const resumoPorInstituicao = useMemo(() => listarResumoPorInstituicao(inadDoAno), [inadDoAno]);
 
+  const selecionarContrato = (contrato: string) => {
+    setContratoSelecionado(contrato || null);
+    setInadFilters((f) => ({ ...f, contrato }));
+    setReceberFilters((f) => ({ ...f, contrato }));
+  };
+
+  const limparContratoSelecionado = () => {
+    setContratoSelecionado(null);
+    setInadFilters((f) => ({ ...f, contrato: "" }));
+    setReceberFilters((f) => ({ ...f, contrato: "" }));
+  };
+
   const filtradas = useMemo(() => {
     const rows = applyFilters(enriquecidas, filters);
     return rows.sort((a, b) => a.vencimento.localeCompare(b.vencimento));
@@ -667,7 +679,24 @@ export default function Financeiro() {
             {contratoResumo.alunos} aluno(s)
           </p>
           <button
-            onClick={() => setContratoSelecionado(null)}
+            onClick={limparContratoSelecionado}
+            className="text-xs text-brand-400 hover:text-brand-300"
+          >
+            ← ver resumo geral
+          </button>
+        </div>
+      )}
+
+      {/* contrato selecionado mas sem nenhum dado de inadimplência/Pronet pra ele — sem isso,
+          os KPIs caíam de volta pro geral em silêncio e parecia que a seleção não tinha feito nada */}
+      {contratoSelecionado && !contratoResumo && (
+        <div className="mb-2 flex items-center gap-2">
+          <p className="text-sm text-amber-400">
+            O contrato <span className="font-medium">{contratoSelecionado}</span> não tem dados de
+            inadimplência importados do Pronet — por isso os números abaixo mostram o resumo geral.
+          </p>
+          <button
+            onClick={limparContratoSelecionado}
             className="text-xs text-brand-400 hover:text-brand-300"
           >
             ← ver resumo geral
@@ -725,7 +754,10 @@ export default function Financeiro() {
         {(
           [
             ["receber", "Contas a Receber"],
-            ["inadimplencia", `Inadimplência${inadimplencia.length ? ` (${inadKpis.registrosInadimplentes})` : ""}`],
+            // o número da aba tem que refletir o contrato selecionado (quando houver),
+            // não o total geral — por isso usa inadFiltradas.length, que já passa
+            // pelo filtro de contrato/ano/apenasInadimplentes, em vez de inadKpis
+            ["inadimplencia", `Inadimplência${inadimplencia.length ? ` (${inadFiltradas.length})` : ""}`],
           ] as [Aba, string][]
         ).map(([id, label]) => (
           <button
@@ -748,7 +780,7 @@ export default function Financeiro() {
           referenciaEm={inadKpis.referenciaEm}
           contratos={inadContratos}
           anos={inadAnos}
-          onSelecionarContrato={setContratoSelecionado}
+          onSelecionarContrato={selecionarContrato}
           onAbrirCliente={setClientePopup}
         />
       ) : (
@@ -763,7 +795,7 @@ export default function Financeiro() {
             referenciaEm={inadKpis.referenciaEm}
             contratos={inadContratos}
             anos={inadAnos}
-            onSelecionarContrato={setContratoSelecionado}
+            onSelecionarContrato={selecionarContrato}
             onAbrirCliente={setClientePopup}
             colunaPendenteLabel="Inadimplente"
           />
@@ -1139,7 +1171,7 @@ export default function Financeiro() {
 
             <button
               onClick={() => {
-                setContratoSelecionado(clientePopup.contrato_nro_controle);
+                selecionarContrato(clientePopup.contrato_nro_controle);
                 setClientePopup(null);
               }}
               className="mt-4 w-full rounded-md border border-ink-600 px-2.5 py-1 text-sm text-ink-200 hover:border-ink-500"
@@ -1180,7 +1212,10 @@ function InadimplenciaTab({
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <select
           value={filters.contrato}
-          onChange={(e) => setFilters((f) => ({ ...f, contrato: e.target.value }))}
+          onChange={(e) => {
+            setFilters((f) => ({ ...f, contrato: e.target.value }));
+            onSelecionarContrato(e.target.value);
+          }}
           className="max-w-[260px] rounded-md border border-ink-600 bg-ink-800 px-2.5 py-1 text-sm"
         >
           <option value="">Todos os contratos</option>
