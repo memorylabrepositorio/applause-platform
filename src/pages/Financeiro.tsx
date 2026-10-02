@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Copy, ExternalLink, QrCode, Receipt } from "lucide-react";
+import * as XLSX from "xlsx";
+import { Copy, Download, ExternalLink, QrCode, Receipt } from "lucide-react";
 import Layout from "@/components/Layout";
 import UltimaAtualizacao from "@/components/UltimaAtualizacao";
 import {
@@ -42,6 +43,8 @@ import {
   fmtPct,
   listarAnos,
   listarContratos,
+  listarResumoPorContrato,
+  listarResumoPorInstituicao,
   type ContratoResumo,
   type InadimplenciaEnriquecida,
   type InadimplenciaFilters,
@@ -83,6 +86,7 @@ export default function Financeiro() {
   const [statusText, setStatusText] = useState("Carregando…");
 
   const [aba, setAba] = useState<Aba>("receber");
+  const [exportOpen, setExportOpen] = useState(false);
   const [inadimplencia, setInadimplencia] = useState<InadimplenciaResumo[]>([]);
   const [inadFilters, setInadFilters] = useState<InadimplenciaFilters>(EMPTY_INAD_FILTERS);
   const [receberFilters, setReceberFilters] = useState<InadimplenciaFilters>(EMPTY_RECEBER_CONTRATOS_FILTERS);
@@ -137,8 +141,6 @@ export default function Financeiro() {
 
   const kpis = useMemo(() => computeKpis(enriquecidas), [enriquecidas]);
 
-  const inadKpis = useMemo(() => computeInadimplenciaKpis(inadimplencia), [inadimplencia]);
-
   const inadEnriquecida = useMemo(
     () => enriquecerInadimplencia(inadimplencia, contratos, clientes),
     [inadimplencia, contratos, clientes]
@@ -157,14 +159,28 @@ export default function Financeiro() {
   const inadContratos = useMemo(() => listarContratos(inadEnriquecida), [inadEnriquecida]);
   const inadAnos = useMemo(() => listarAnos(inadEnriquecida), [inadEnriquecida]);
 
+  // ano escolhido no seletor da aba ativa — passa a valer pros KPIs do topo inteiro,
+  // não só pra tabela (pedido do usuário: "quando mudar o ano, quero que conte só aquele ano")
+  const anoAtivo = aba === "inadimplencia" ? inadFilters.ano : receberFilters.ano;
+
+  const inadDoAno = useMemo(
+    () => (anoAtivo ? inadEnriquecida.filter((r) => r.ano_periodo === anoAtivo) : inadEnriquecida),
+    [inadEnriquecida, anoAtivo]
+  );
+
+  const inadKpis = useMemo(() => computeInadimplenciaKpis(inadDoAno), [inadDoAno]);
+
   const contratoResumo: ContratoResumo | null = useMemo(
     () => (contratoSelecionado ? computeContratoResumo(inadEnriquecida, contratoSelecionado) : null),
     [inadEnriquecida, contratoSelecionado]
   );
 
-  // resumo geral (todos os contratos) a partir dos dados reais do Pronet — usado no topo
-  // do painel em vez dos KPIs de financeiro_parcelas, que fica vazia (ninguém usa lançamento manual)
-  const resumoGeral: ContratoResumo | null = useMemo(() => computeResumoGeral(inadEnriquecida), [inadEnriquecida]);
+  // resumo geral (todos os contratos, já respeitando o ano selecionado) a partir dos dados reais
+  // do Pronet — usado no topo do painel em vez dos KPIs de financeiro_parcelas, que fica vazia
+  const resumoGeral: ContratoResumo | null = useMemo(() => computeResumoGeral(inadDoAno), [inadDoAno]);
+
+  const resumoPorContrato = useMemo(() => listarResumoPorContrato(inadDoAno), [inadDoAno]);
+  const resumoPorInstituicao = useMemo(() => listarResumoPorInstituicao(inadDoAno), [inadDoAno]);
 
   const filtradas = useMemo(() => {
     const rows = applyFilters(enriquecidas, filters);
@@ -175,6 +191,251 @@ export default function Financeiro() {
     () => (drawerId != null ? enriquecidas.find((p) => p.id === drawerId) || null : null),
     [enriquecidas, drawerId]
   );
+
+  // ---------------------------------------------------------------------
+  // Exportação de relatórios (inadimplência / contas a receber) — mesmo
+  // padrão usado no Painel de Vendas: Excel (xlsx), apresentação (pptx) e CSV
+  // ---------------------------------------------------------------------
+
+  const periodoLabel = anoAtivo ? anoAtivo : "Todos os anos";
+  const sufixoArquivo = anoAtivo ? `_${anoAtivo}` : "";
+
+  function exportExcelInad() {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet([
+        ["Indicador", "Valor"],
+        ["Período", periodoLabel],
+        ["Total contratado", resumoGeral?.contratado ?? 0],
+        ["Recebido (quitado)", resumoGeral?.quitado ?? 0],
+        ["A receber", resumoGeral?.pendente ?? 0],
+        ["Inadimplente", resumoGeral?.inadimplente ?? 0],
+        ["% inadimplência média", Number(inadKpis.percentualMedio.toFixed(1))],
+        ["Contratos afetados", inadKpis.contratosAfetados],
+        ["Registros inadimplentes", inadKpis.registrosInadimplentes],
+        ["Alunos (Pronet)", resumoGeral?.alunos ?? 0],
+      ]),
+      "Resumo"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet([
+        ["Contrato", "Instituição", "Curso", "Ano", "Alunos", "Contratado", "Quitado", "A receber", "Inadimplente"],
+        ...resumoPorContrato.map((c) => [
+          c.contrato,
+          c.instituicao || "",
+          c.curso || "",
+          c.ano_periodo || "",
+          c.alunos,
+          c.contratado,
+          c.quitado,
+          c.pendente,
+          c.inadimplente,
+        ]),
+      ]),
+      "Por contrato"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet([
+        ["Instituição", "Contratado", "Quitado", "A receber", "Inadimplente"],
+        ...resumoPorInstituicao.map((i) => [i.instituicao, i.contratado, i.quitado, i.pendente, i.inadimplente]),
+      ]),
+      "Por instituição"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet([
+        ["Aluno", "Contrato", "Instituição", "Curso", "Ano", "Contratado", "Quitado", "A receber", "Inadimplente", "% Inad."],
+        ...inadDoAno.map((r) => [
+          r.cliente_nome,
+          r.contrato_nro_controle,
+          r.instituicao || "",
+          r.curso || "",
+          r.ano_periodo || "",
+          r.valor_contratado,
+          r.valor_quitado,
+          r.valor_pendente,
+          r.valor_inadimplente,
+          Number(r.percentual_inadimplente.toFixed(1)),
+        ]),
+      ]),
+      "Detalhado"
+    );
+    XLSX.writeFile(wb, `relatorio-inadimplencia${sufixoArquivo}.xlsx`);
+  }
+
+  function exportCSVInad() {
+    const header = ["Aluno", "Contrato", "Instituição", "Curso", "Ano", "Contratado", "Quitado", "A receber", "Inadimplente", "% Inad."];
+    const lines = [header.join(";")].concat(
+      inadDoAno.map((r) =>
+        [
+          r.cliente_nome,
+          r.contrato_nro_controle,
+          r.instituicao || "",
+          r.curso || "",
+          r.ano_periodo || "",
+          r.valor_contratado.toFixed(2).replace(".", ","),
+          r.valor_quitado.toFixed(2).replace(".", ","),
+          r.valor_pendente.toFixed(2).replace(".", ","),
+          r.valor_inadimplente.toFixed(2).replace(".", ","),
+          r.percentual_inadimplente.toFixed(1).replace(".", ","),
+        ].join(";")
+      )
+    );
+    const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `inadimplencia${sufixoArquivo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function exportPPTXInad() {
+    const PptxGenJS = (await import("pptxgenjs")).default;
+    const pptx = new PptxGenJS();
+    pptx.defineLayout({ name: "WIDE", width: 13.33, height: 7.5 });
+    pptx.layout = "WIDE";
+
+    const DARK = "0B0B0D";
+    const CARD = "17171B";
+    const BORDER = "232326";
+    const MUTED = "8A8A94";
+    const TEXT = "E8E8EC";
+    const BRAND = "4A9ADE";
+    const RED = "E05C5C";
+
+    // 1. capa
+    let slide = pptx.addSlide();
+    slide.background = { color: DARK };
+    slide.addText("Financeiro — Inadimplência", { x: 0.6, y: 2.7, w: 12, h: 1, fontSize: 36, bold: true, color: "FFFFFF" });
+    slide.addText(`${periodoLabel} · Applause Formaturas`, {
+      x: 0.6,
+      y: 3.6,
+      w: 12,
+      h: 0.5,
+      fontSize: 18,
+      color: BRAND,
+    });
+    slide.addText(`Relatório gerado em ${new Date().toLocaleDateString("pt-BR")} · base Pronet`, {
+      x: 0.6,
+      y: 6.9,
+      w: 8,
+      h: 0.4,
+      fontSize: 11,
+      color: MUTED,
+    });
+
+    // 2. resumo executivo
+    slide = pptx.addSlide();
+    slide.background = { color: DARK };
+    slide.addText("Resumo executivo", { x: 0.5, y: 0.4, w: 12, h: 0.6, fontSize: 26, bold: true, color: "FFFFFF" });
+    const kpiItems: [string, string][] = [
+      ["Total contratado", fmtBRL(resumoGeral?.contratado ?? 0)],
+      ["Recebido (quitado)", fmtBRL(resumoGeral?.quitado ?? 0)],
+      ["A receber", fmtBRL(resumoGeral?.pendente ?? 0)],
+      ["Inadimplente", fmtBRL(resumoGeral?.inadimplente ?? 0)],
+      ["% inadimplência média", fmtPct(inadKpis.percentualMedio)],
+      ["Contratos afetados", String(inadKpis.contratosAfetados)],
+    ];
+    kpiItems.forEach(([label, value], i) => {
+      const x = 0.5 + (i % 3) * 4.15;
+      const y = 1.35 + Math.floor(i / 3) * 2;
+      slide.addShape(pptx.ShapeType.roundRect, {
+        x,
+        y,
+        w: 3.9,
+        h: 1.75,
+        fill: { color: CARD },
+        line: { color: BORDER, width: 1 },
+        rectRadius: 0.08,
+      });
+      slide.addText(label.toUpperCase(), { x: x + 0.25, y: y + 0.2, w: 3.4, h: 0.4, fontSize: 11, color: MUTED });
+      slide.addText(value, { x: x + 0.25, y: y + 0.6, w: 3.4, h: 0.8, fontSize: 22, bold: true, color: "FFFFFF" });
+    });
+
+    // 3. inadimplência por instituição
+    slide = pptx.addSlide();
+    slide.background = { color: DARK };
+    slide.addText("Inadimplência por instituição", { x: 0.5, y: 0.35, w: 12, h: 0.6, fontSize: 24, bold: true, color: "FFFFFF" });
+    slide.addChart(
+      pptx.ChartType.bar,
+      [
+        {
+          name: "Inadimplente",
+          labels: resumoPorInstituicao.map((i) => i.instituicao),
+          values: resumoPorInstituicao.map((i) => i.inadimplente),
+        },
+      ],
+      {
+        x: 0.5,
+        y: 1.1,
+        w: 12.3,
+        h: 5.6,
+        chartColors: [RED],
+        showLegend: false,
+        showValue: false,
+        catAxisLabelColor: MUTED,
+        valAxisLabelColor: MUTED,
+        catAxisLineColor: BORDER,
+        valAxisLineColor: BORDER,
+        plotArea: { fill: { color: DARK } },
+        chartArea: { fill: { color: DARK } },
+      }
+    );
+
+    // 4. top contratos inadimplentes
+    slide = pptx.addSlide();
+    slide.background = { color: DARK };
+    slide.addText("Top contratos inadimplentes", { x: 0.5, y: 0.35, w: 12, h: 0.6, fontSize: 24, bold: true, color: "FFFFFF" });
+    const headOpts = { bold: true, color: MUTED, fontSize: 11, fill: { color: CARD } };
+    const bodyOpts = { color: TEXT, fontSize: 12, fill: { color: DARK } };
+    const topContratos = resumoPorContrato.filter((c) => c.inadimplente > 0).slice(0, 12);
+    const tableRows = [
+      [
+        { text: "Contrato", options: headOpts },
+        { text: "Instituição", options: headOpts },
+        { text: "Alunos", options: headOpts },
+        { text: "Contratado", options: headOpts },
+        { text: "Inadimplente", options: headOpts },
+      ],
+      ...topContratos.map((c) => [
+        { text: c.contrato, options: bodyOpts },
+        { text: c.instituicao || "—", options: bodyOpts },
+        { text: String(c.alunos), options: bodyOpts },
+        { text: fmtBRL(c.contratado), options: bodyOpts },
+        { text: fmtBRL(c.inadimplente), options: bodyOpts },
+      ]),
+    ];
+    slide.addTable(tableRows, {
+      x: 0.5,
+      y: 1.15,
+      w: 12.3,
+      fontSize: 12,
+      border: { type: "solid", color: BORDER, pt: 0.5 },
+      autoPage: false,
+    });
+
+    // 5. destaques
+    slide = pptx.addSlide();
+    slide.background = { color: DARK };
+    slide.addText("Destaques", { x: 0.5, y: 0.4, w: 12, h: 0.6, fontSize: 26, bold: true, color: "FFFFFF" });
+    const bullets: string[] = [];
+    const piorContrato = topContratos[0];
+    const piorInstituicao = resumoPorInstituicao[0];
+    if (piorContrato) bullets.push(`Contrato mais crítico: ${piorContrato.contrato} — ${fmtBRL(piorContrato.inadimplente)} em aberto`);
+    if (piorInstituicao) bullets.push(`Instituição mais afetada: ${piorInstituicao.instituicao} — ${fmtBRL(piorInstituicao.inadimplente)} inadimplente`);
+    bullets.push(`${inadKpis.contratosAfetados} contrato(s) afetados de um total acompanhado pelo relatório Pronet`);
+    bullets.push(`${inadKpis.registrosInadimplentes} registro(s) de inadimplência, somando ${fmtBRL(inadKpis.totalInadimplente)}`);
+    slide.addText(
+      bullets.map((b) => ({ text: b, options: { bullet: true, breakLine: true } })),
+      { x: 0.6, y: 1.3, w: 12, h: 4.5, fontSize: 16, color: TEXT, lineSpacing: 32 }
+    );
+
+    await pptx.writeFile({ fileName: `relatorio-inadimplencia${sufixoArquivo}.pptx` });
+  }
 
   function openDrawer(p: ParcelaEnriquecida) {
     setDrawerId(p.id);
@@ -337,6 +598,51 @@ export default function Financeiro() {
           <button onClick={() => refresh(true)} className="text-sm text-ink-300 hover:text-ink-50">
             ↻ Atualizar
           </button>
+          {inadimplencia.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setExportOpen((v) => !v)}
+                className="flex items-center gap-1.5 rounded-md border border-ink-700 bg-ink-850 px-2.5 py-1.5 text-sm text-ink-200 transition hover:border-brand-600 hover:text-brand-300"
+              >
+                <Download size={14} strokeWidth={1.75} />
+                Exportar relatório
+              </button>
+              {exportOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+                  <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-md border border-ink-700 bg-ink-850 shadow-xl">
+                    <button
+                      onClick={() => {
+                        exportPPTXInad();
+                        setExportOpen(false);
+                      }}
+                      className="block w-full px-3 py-2 text-left text-sm text-ink-200 hover:bg-ink-800"
+                    >
+                      Apresentação (.pptx)
+                    </button>
+                    <button
+                      onClick={() => {
+                        exportExcelInad();
+                        setExportOpen(false);
+                      }}
+                      className="block w-full px-3 py-2 text-left text-sm text-ink-200 hover:bg-ink-800"
+                    >
+                      Excel (.xlsx)
+                    </button>
+                    <button
+                      onClick={() => {
+                        exportCSVInad();
+                        setExportOpen(false);
+                      }}
+                      className="block w-full px-3 py-2 text-left text-sm text-ink-200 hover:bg-ink-800"
+                    >
+                      CSV (.csv)
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <button
             onClick={() => setShowForm((v) => !v)}
             className="rounded-md bg-brand-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-brand-500"

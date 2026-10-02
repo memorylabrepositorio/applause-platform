@@ -166,6 +166,59 @@ export function computeContratoResumo(rows: InadimplenciaEnriquecida[], contrato
   };
 }
 
+/** agrupa por contrato de uma vez só — usado nos relatórios (Excel/PPTX) pra não rodar computeContratoResumo N vezes */
+export function listarResumoPorContrato(rows: InadimplenciaEnriquecida[]): ContratoResumo[] {
+  const porContrato = new Map<string, InadimplenciaEnriquecida[]>();
+  for (const r of rows) {
+    const arr = porContrato.get(r.contrato_nro_controle);
+    if (arr) arr.push(r);
+    else porContrato.set(r.contrato_nro_controle, [r]);
+  }
+  return Array.from(porContrato.entries())
+    .map(([contrato, doContrato]) => ({
+      contrato,
+      instituicao: doContrato[0].instituicao,
+      curso: doContrato[0].curso,
+      ano_periodo: doContrato[0].ano_periodo,
+      contratado: doContrato.reduce((s, r) => s + r.valor_contratado, 0),
+      faturado: doContrato.reduce((s, r) => s + r.valor_faturado, 0),
+      quitado: doContrato.reduce((s, r) => s + r.valor_quitado, 0),
+      pendente: doContrato.reduce((s, r) => s + r.valor_pendente, 0),
+      aVencer: doContrato.reduce((s, r) => s + r.valor_a_vencer, 0),
+      inadimplente: doContrato.reduce((s, r) => s + r.valor_inadimplente, 0),
+      alunos: new Set(doContrato.map((r) => r.cliente_nome)).size,
+    }))
+    .sort((a, b) => b.inadimplente - a.inadimplente);
+}
+
+export interface ResumoInstituicao {
+  instituicao: string;
+  contratado: number;
+  quitado: number;
+  pendente: number;
+  inadimplente: number;
+}
+
+/** agrupa por instituição — usado no gráfico da apresentação */
+export function listarResumoPorInstituicao(rows: InadimplenciaEnriquecida[]): ResumoInstituicao[] {
+  const porInst = new Map<string, InadimplenciaEnriquecida[]>();
+  for (const r of rows) {
+    const key = r.instituicao || "Não identificada";
+    const arr = porInst.get(key);
+    if (arr) arr.push(r);
+    else porInst.set(key, [r]);
+  }
+  return Array.from(porInst.entries())
+    .map(([instituicao, doInst]) => ({
+      instituicao,
+      contratado: doInst.reduce((s, r) => s + r.valor_contratado, 0),
+      quitado: doInst.reduce((s, r) => s + r.valor_quitado, 0),
+      pendente: doInst.reduce((s, r) => s + r.valor_pendente, 0),
+      inadimplente: doInst.reduce((s, r) => s + r.valor_inadimplente, 0),
+    }))
+    .sort((a, b) => b.inadimplente - a.inadimplente);
+}
+
 export interface InadimplenciaFilters {
   search: string;
   apenasInadimplentes: boolean;
