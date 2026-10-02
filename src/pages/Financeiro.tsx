@@ -37,6 +37,7 @@ import {
   applyInadimplenciaFilters,
   computeContratoResumo,
   computeInadimplenciaKpis,
+  computeResumoGeral,
   enriquecerInadimplencia,
   fmtPct,
   listarAnos,
@@ -160,6 +161,10 @@ export default function Financeiro() {
     () => (contratoSelecionado ? computeContratoResumo(inadEnriquecida, contratoSelecionado) : null),
     [inadEnriquecida, contratoSelecionado]
   );
+
+  // resumo geral (todos os contratos) a partir dos dados reais do Pronet — usado no topo
+  // do painel em vez dos KPIs de financeiro_parcelas, que fica vazia (ninguém usa lançamento manual)
+  const resumoGeral: ContratoResumo | null = useMemo(() => computeResumoGeral(inadEnriquecida), [inadEnriquecida]);
 
   const filtradas = useMemo(() => {
     const rows = applyFilters(enriquecidas, filters);
@@ -342,10 +347,21 @@ export default function Financeiro() {
       </header>
 
       <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Total contratado" value={fmtBRL(kpis.totalContratado)} />
-        <Kpi label="Recebido" value={fmtBRL(kpis.totalRecebido)} tone="emerald" />
-        <Kpi label="Em aberto (em dia)" value={fmtBRL(kpis.totalEmAberto)} tone="slate" />
-        <Kpi label="Vencido" value={fmtBRL(kpis.totalVencido)} tone="red" />
+        {resumoGeral ? (
+          <>
+            <Kpi label="Total contratado" value={fmtBRL(resumoGeral.contratado)} />
+            <Kpi label="Recebido" value={fmtBRL(resumoGeral.quitado)} tone="emerald" />
+            <Kpi label="A receber" value={fmtBRL(resumoGeral.pendente)} tone="slate" />
+            <Kpi label="Inadimplente" value={fmtBRL(resumoGeral.inadimplente)} tone="red" />
+          </>
+        ) : (
+          <>
+            <Kpi label="Total contratado" value={fmtBRL(kpis.totalContratado)} />
+            <Kpi label="Recebido" value={fmtBRL(kpis.totalRecebido)} tone="emerald" />
+            <Kpi label="Em aberto (em dia)" value={fmtBRL(kpis.totalEmAberto)} tone="slate" />
+            <Kpi label="Vencido" value={fmtBRL(kpis.totalVencido)} tone="red" />
+          </>
+        )}
       </div>
 
       {inadimplencia.length > 0 && (
@@ -378,10 +394,10 @@ export default function Financeiro() {
               </>
             ) : (
               <>
-                <Kpi label="Inadimplência (Pronet)" value={fmtBRL(inadKpis.totalInadimplente)} tone="red" />
                 <Kpi label="% inadimplência média" value={fmtPct(inadKpis.percentualMedio)} tone="red" />
                 <Kpi label="Contratos afetados" value={String(inadKpis.contratosAfetados)} tone="slate" />
                 <Kpi label="Registros inadimplentes" value={String(inadKpis.registrosInadimplentes)} tone="slate" />
+                <Kpi label="Alunos (Pronet)" value={String(resumoGeral?.alunos ?? 0)} tone="slate" />
               </>
             )}
           </div>

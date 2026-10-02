@@ -130,6 +130,24 @@ export interface ContratoResumo {
   alunos: number;
 }
 
+/** totais de TODOS os contratos juntos — usado no topo do painel quando nenhum contrato está selecionado */
+export function computeResumoGeral(rows: InadimplenciaEnriquecida[]): ContratoResumo | null {
+  if (!rows.length) return null;
+  return {
+    contrato: "",
+    instituicao: null,
+    curso: null,
+    ano_periodo: null,
+    contratado: rows.reduce((s, r) => s + r.valor_contratado, 0),
+    faturado: rows.reduce((s, r) => s + r.valor_faturado, 0),
+    quitado: rows.reduce((s, r) => s + r.valor_quitado, 0),
+    pendente: rows.reduce((s, r) => s + r.valor_pendente, 0),
+    aVencer: rows.reduce((s, r) => s + r.valor_a_vencer, 0),
+    inadimplente: rows.reduce((s, r) => s + r.valor_inadimplente, 0),
+    alunos: new Set(rows.map((r) => r.cliente_nome)).size,
+  };
+}
+
 export function computeContratoResumo(rows: InadimplenciaEnriquecida[], contrato: string): ContratoResumo | null {
   const doContrato = rows.filter((r) => r.contrato_nro_controle === contrato);
   if (!doContrato.length) return null;
