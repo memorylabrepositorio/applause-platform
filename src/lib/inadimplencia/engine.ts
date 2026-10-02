@@ -44,6 +44,22 @@ interface ClienteInfo {
   tipo?: string | null;
 }
 
+/**
+ * o `ano_periodo` vem direto do Pronet com formatos inconsistentes (ex: "2026-2",
+ * "2026-02", "2023-" com o semestre em branco) e usa "9999-99" como sentinela de
+ * "sem período definido". Normaliza pra um rótulo único tipo "2026/2" ou "2026",
+ * e descarta os sentinelas/lixo (retorna null).
+ */
+export function normalizarAnoPeriodo(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const m = /^(\d{4})-?(\d{1,2})?$/.exec(raw.trim());
+  if (!m) return raw.trim() || null;
+  const ano = Number(m[1]);
+  if (!ano || ano >= 9000) return null;
+  const semestre = m[2] ? Number(m[2]) : null;
+  return semestre ? `${ano}/${semestre}` : String(ano);
+}
+
 function normalizarNome(s: string): string {
   return s
     .normalize("NFD")
@@ -76,7 +92,7 @@ export function enriquecerInadimplencia(
       clientePorNomeEContrato.get(nomeNorm + "|" + r.contrato_nro_controle) || clientePorNome.get(nomeNorm);
     return {
       ...r,
-      ano_periodo: contrato?.ano_periodo ?? null,
+      ano_periodo: normalizarAnoPeriodo(contrato?.ano_periodo),
       instituicao: contrato?.instituicao ?? null,
       curso: contrato?.curso ?? null,
       clienteCpf: cliente?.cpf ?? null,
@@ -259,11 +275,17 @@ export function listarContratos(rows: { contrato_nro_controle: string }[]): stri
   );
 }
 
-/** lista de anos/períodos distintos (mais recente primeiro) — pro seletor de ano */
+/** lista de anos/períodos distintos (mais recente primeiro) — pro seletor de ano.
+ * ordena numericamente por ano e depois por semestre, não por string (evita "9999-99"
+ * aparecer no topo e "2026-2"/"2026-02" ficarem fora de ordem) */
 export function listarAnos(rows: InadimplenciaEnriquecida[]): string[] {
-  return Array.from(new Set(rows.map((r) => r.ano_periodo).filter((a): a is string => !!a))).sort((a, b) =>
-    b.localeCompare(a, "pt-BR")
-  );
+  const valores = Array.from(new Set(rows.map((r) => r.ano_periodo).filter((a): a is string => !!a)));
+  return valores.sort((a, b) => {
+    const [anoA, semA] = a.split("/").map(Number);
+    const [anoB, semB] = b.split("/").map(Number);
+    if (anoB !== anoA) return anoB - anoA;
+    return (semB || 0) - (semA || 0);
+  });
 }
 
 export function fmtPct(v: number): string {
