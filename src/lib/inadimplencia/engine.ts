@@ -47,8 +47,8 @@ interface ClienteInfo {
 /**
  * o `ano_periodo` vem direto do Pronet com formatos inconsistentes (ex: "2026-2",
  * "2026-02", "2023-" com o semestre em branco) e usa "9999-99" como sentinela de
- * "sem período definido". Normaliza pra um rótulo único tipo "2026/2" ou "2026",
- * e descarta os sentinelas/lixo (retorna null).
+ * "sem período definido". Normaliza pra só o ano (ex: "2026") — os semestres do
+ * mesmo ano são juntados numa única opção — e descarta os sentinelas/lixo (retorna null).
  */
 export function normalizarAnoPeriodo(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -56,8 +56,7 @@ export function normalizarAnoPeriodo(raw: string | null | undefined): string | n
   if (!m) return raw.trim() || null;
   const ano = Number(m[1]);
   if (!ano || ano >= 9000) return null;
-  const semestre = m[2] ? Number(m[2]) : null;
-  return semestre ? `${ano}/${semestre}` : String(ano);
+  return String(ano);
 }
 
 function normalizarNome(s: string): string {
@@ -280,12 +279,7 @@ export function listarContratos(rows: { contrato_nro_controle: string }[]): stri
  * aparecer no topo e "2026-2"/"2026-02" ficarem fora de ordem) */
 export function listarAnos(rows: InadimplenciaEnriquecida[]): string[] {
   const valores = Array.from(new Set(rows.map((r) => r.ano_periodo).filter((a): a is string => !!a)));
-  return valores.sort((a, b) => {
-    const [anoA, semA] = a.split("/").map(Number);
-    const [anoB, semB] = b.split("/").map(Number);
-    if (anoB !== anoA) return anoB - anoA;
-    return (semB || 0) - (semA || 0);
-  });
+  return valores.sort((a, b) => Number(b) - Number(a));
 }
 
 export function fmtPct(v: number): string {
