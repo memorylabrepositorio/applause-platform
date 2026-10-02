@@ -179,6 +179,10 @@ export default function Financeiro() {
   // do Pronet — usado no topo do painel em vez dos KPIs de financeiro_parcelas, que fica vazia
   const resumoGeral: ContratoResumo | null = useMemo(() => computeResumoGeral(inadDoAno), [inadDoAno]);
 
+  // o que os 4 KPIs principais do topo mostram: o contrato selecionado (se houver) ou o
+  // resumo geral — assim os números do topo SEMPRE refletem o que está selecionado
+  const topoResumo: ContratoResumo | null = contratoSelecionado && contratoResumo ? contratoResumo : resumoGeral;
+
   const resumoPorContrato = useMemo(() => listarResumoPorContrato(inadDoAno), [inadDoAno]);
   const resumoPorInstituicao = useMemo(() => listarResumoPorInstituicao(inadDoAno), [inadDoAno]);
 
@@ -652,13 +656,34 @@ export default function Financeiro() {
         </div>
       </header>
 
+      {contratoSelecionado && contratoResumo && (
+        <div className="mb-2 flex items-center gap-2">
+          <p className="text-sm text-ink-200">
+            Contrato <span className="font-medium text-ink-50">{contratoResumo.contrato}</span>
+            {contratoResumo.instituicao ? ` · ${contratoResumo.instituicao}` : ""}
+            {contratoResumo.curso ? ` · ${contratoResumo.curso}` : ""}
+            {contratoResumo.ano_periodo ? ` · ${contratoResumo.ano_periodo}` : ""}
+            {" · "}
+            {contratoResumo.alunos} aluno(s)
+          </p>
+          <button
+            onClick={() => setContratoSelecionado(null)}
+            className="text-xs text-brand-400 hover:text-brand-300"
+          >
+            ← ver resumo geral
+          </button>
+        </div>
+      )}
+
+      {/* os 4 KPIs principais SEMPRE refletem o que está selecionado: o contrato clicado,
+          ou — na ausência de um — o resumo geral (já filtrado pelo ano escolhido) */}
       <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {resumoGeral ? (
+        {topoResumo ? (
           <>
-            <Kpi label="Total contratado" value={fmtBRL(resumoGeral.contratado)} />
-            <Kpi label="Recebido" value={fmtBRL(resumoGeral.quitado)} tone="emerald" />
-            <Kpi label="A receber" value={fmtBRL(resumoGeral.pendente)} tone="slate" />
-            <Kpi label="Inadimplente" value={fmtBRL(resumoGeral.inadimplente)} tone="red" />
+            <Kpi label="Total contratado" value={fmtBRL(topoResumo.contratado)} />
+            <Kpi label="Recebido (quitado)" value={fmtBRL(topoResumo.quitado)} tone="emerald" />
+            <Kpi label="A receber" value={fmtBRL(topoResumo.pendente)} tone="slate" />
+            <Kpi label="Inadimplente" value={fmtBRL(topoResumo.inadimplente)} tone="red" />
           </>
         ) : (
           <>
@@ -671,43 +696,29 @@ export default function Financeiro() {
       </div>
 
       {inadimplencia.length > 0 && (
-        <>
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {contratoSelecionado && contratoResumo ? (
-            <div className="mb-2 flex items-center gap-2">
-              <p className="text-sm text-ink-200">
-                Contrato <span className="font-medium text-ink-50">{contratoResumo.contrato}</span>
-                {contratoResumo.instituicao ? ` · ${contratoResumo.instituicao}` : ""}
-                {contratoResumo.curso ? ` · ${contratoResumo.curso}` : ""}
-                {contratoResumo.ano_periodo ? ` · ${contratoResumo.ano_periodo}` : ""}
-                {" · "}
-                {contratoResumo.alunos} aluno(s)
-              </p>
-              <button
-                onClick={() => setContratoSelecionado(null)}
-                className="text-xs text-brand-400 hover:text-brand-300"
-              >
-                ← ver resumo geral
-              </button>
-            </div>
-          ) : null}
-          <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {contratoSelecionado && contratoResumo ? (
-              <>
-                <Kpi label="Contratado" value={fmtBRL(contratoResumo.contratado)} />
-                <Kpi label="Quitado" value={fmtBRL(contratoResumo.quitado)} tone="emerald" />
-                <Kpi label="A receber (pendente)" value={fmtBRL(contratoResumo.pendente)} tone="slate" />
-                <Kpi label="Inadimplente" value={fmtBRL(contratoResumo.inadimplente)} tone="red" />
-              </>
-            ) : (
-              <>
-                <Kpi label="% inadimplência média" value={fmtPct(inadKpis.percentualMedio)} tone="red" />
-                <Kpi label="Contratos afetados" value={String(inadKpis.contratosAfetados)} tone="slate" />
-                <Kpi label="Registros inadimplentes" value={String(inadKpis.registrosInadimplentes)} tone="slate" />
-                <Kpi label="Alunos (Pronet)" value={String(resumoGeral?.alunos ?? 0)} tone="slate" />
-              </>
-            )}
-          </div>
-        </>
+            <>
+              <Kpi
+                label="% inadimplência (contrato)"
+                value={fmtPct(
+                  contratoResumo.contratado > 0 ? (contratoResumo.inadimplente / contratoResumo.contratado) * 100 : 0
+                )}
+                tone="red"
+              />
+              <Kpi label="Faturado" value={fmtBRL(contratoResumo.faturado)} tone="slate" />
+              <Kpi label="Alunos no contrato" value={String(contratoResumo.alunos)} tone="slate" />
+              <Kpi label="Alunos inadimplentes" value={String(contratoResumo.alunosInadimplentes)} tone="slate" />
+            </>
+          ) : (
+            <>
+              <Kpi label="% inadimplência média" value={fmtPct(inadKpis.percentualMedio)} tone="red" />
+              <Kpi label="Contratos afetados" value={String(inadKpis.contratosAfetados)} tone="slate" />
+              <Kpi label="Registros inadimplentes" value={String(inadKpis.registrosInadimplentes)} tone="slate" />
+              <Kpi label="Alunos (Pronet)" value={String(resumoGeral?.alunos ?? 0)} tone="slate" />
+            </>
+          )}
+        </div>
       )}
 
       <div className="mb-4 flex gap-1 border-b border-ink-800">

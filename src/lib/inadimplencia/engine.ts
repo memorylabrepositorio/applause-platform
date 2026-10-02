@@ -59,6 +59,18 @@ export function normalizarAnoPeriodo(raw: string | null | undefined): string | n
   return String(ano);
 }
 
+/** o Pronet usa placeholders tipo "** NÃO DEFINIDO **" / "NAO DEFINIDO" / "N/D" quando o
+ * campo não foi preenchido — trata como vazio (null) em vez de mostrar esse texto cru na tela */
+function normalizarTextoPronet(s: string | null | undefined): string | null {
+  if (!s) return null;
+  const limpo = s.trim();
+  if (!limpo) return null;
+  const semSimbolos = limpo.replace(/\*/g, "").trim();
+  const norm = normalizarNome(semSimbolos);
+  if (["NAO DEFINIDO", "NAO DEFINIDA", "INDEFINIDO", "INDEFINIDA", "N/D", "N/A", "-"].includes(norm)) return null;
+  return limpo;
+}
+
 function normalizarNome(s: string): string {
   return s
     .normalize("NFD")
@@ -92,8 +104,8 @@ export function enriquecerInadimplencia(
     return {
       ...r,
       ano_periodo: normalizarAnoPeriodo(contrato?.ano_periodo),
-      instituicao: contrato?.instituicao ?? null,
-      curso: contrato?.curso ?? null,
+      instituicao: normalizarTextoPronet(contrato?.instituicao),
+      curso: normalizarTextoPronet(contrato?.curso),
       clienteCpf: cliente?.cpf ?? null,
       clienteTelefone: cliente?.telefone ?? null,
       clienteStatus: cliente?.status ?? null,
@@ -143,6 +155,12 @@ export interface ContratoResumo {
   aVencer: number;
   inadimplente: number;
   alunos: number;
+  /** quantos alunos distintos têm inadimplência > 0 — diferente de `alunos`, que conta todos */
+  alunosInadimplentes: number;
+}
+
+function contarAlunosInadimplentes(rows: InadimplenciaEnriquecida[]): number {
+  return new Set(rows.filter((r) => r.valor_inadimplente > 0).map((r) => r.cliente_nome)).size;
 }
 
 /** totais de TODOS os contratos juntos — usado no topo do painel quando nenhum contrato está selecionado */
@@ -160,6 +178,7 @@ export function computeResumoGeral(rows: InadimplenciaEnriquecida[]): ContratoRe
     aVencer: rows.reduce((s, r) => s + r.valor_a_vencer, 0),
     inadimplente: rows.reduce((s, r) => s + r.valor_inadimplente, 0),
     alunos: new Set(rows.map((r) => r.cliente_nome)).size,
+    alunosInadimplentes: contarAlunosInadimplentes(rows),
   };
 }
 
@@ -178,6 +197,7 @@ export function computeContratoResumo(rows: InadimplenciaEnriquecida[], contrato
     aVencer: doContrato.reduce((s, r) => s + r.valor_a_vencer, 0),
     inadimplente: doContrato.reduce((s, r) => s + r.valor_inadimplente, 0),
     alunos: new Set(doContrato.map((r) => r.cliente_nome)).size,
+    alunosInadimplentes: contarAlunosInadimplentes(doContrato),
   };
 }
 
@@ -202,6 +222,7 @@ export function listarResumoPorContrato(rows: InadimplenciaEnriquecida[]): Contr
       aVencer: doContrato.reduce((s, r) => s + r.valor_a_vencer, 0),
       inadimplente: doContrato.reduce((s, r) => s + r.valor_inadimplente, 0),
       alunos: new Set(doContrato.map((r) => r.cliente_nome)).size,
+      alunosInadimplentes: contarAlunosInadimplentes(doContrato),
     }))
     .sort((a, b) => b.inadimplente - a.inadimplente);
 }
